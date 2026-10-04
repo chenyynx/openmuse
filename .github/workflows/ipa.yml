@@ -37,8 +37,9 @@ jobs:
         run: |
           set -o pipefail
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['schemes'][0])")
-          echo "workspace=$WORKSPACE scheme=$SCHEME"
+          PROJECT=$(ls -d *.xcodeproj | head -1)
+          SCHEME=$(xcodebuild -project "$PROJECT" -list -json | python3 -c "import json,sys; print(json.load(sys.stdin)['project']['schemes'][0])")
+          echo "workspace=$WORKSPACE project=$PROJECT scheme=$SCHEME"
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \

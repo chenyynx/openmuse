@@ -53,7 +53,15 @@ jobs:
       - name: Package IPA
         working-directory: apps/mobile/ios
         run: |
-          APP=$(find DerivedData/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          echo "cwd=$(pwd)"
+          echo '--- DerivedData contents:'
+          ls -la DerivedData 2>/dev/null || echo 'no DerivedData here'
+          ls -la DerivedData/Build/Products 2>/dev/null || echo 'no Products dir'
+          APP=$(find DerivedData -type d -name '*.app' 2>/dev/null | head -1)
+          if [ -z "$APP" ]; then
+            echo '--- fallback workspace-wide search:'
+            APP=$(find . -type d -name '*.app' 2>/dev/null | head -1)
+          fi
           echo "app bundle: $APP"
           test -n "$APP"
           rm -rf Payload OpenMuse.ipa

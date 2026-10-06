@@ -15,11 +15,7 @@ import {
 } from "@tanstack/ai";
 import { type AnthropicChatModel, anthropicText } from "@tanstack/ai-anthropic";
 import { type GeminiTextModel, geminiText } from "@tanstack/ai-gemini";
-import {
-  type OpenAIChatModel,
-  openaiChatCompletions,
-  openaiText,
-} from "@tanstack/ai-openai";
+import { type OpenAIChatModel, openaiChatCompletions, openaiText } from "@tanstack/ai-openai";
 import { map, mergeMap, type Observable } from "rxjs";
 import { z } from "zod";
 import { MODEL_MAX_RETRIES } from "../config.ts";

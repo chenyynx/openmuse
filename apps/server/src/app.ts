@@ -7,7 +7,7 @@ import { cors } from "hono/cors";
 import { z } from "zod";
 import { emailDraftSchema, proposalSchema } from "../../../packages/domain/src/index.ts";
 import { ActionService } from "./actions.ts";
-import { agentConfigured, makeRuntime } from "./agent.ts";
+import { agentConfigured, makeRuntime, normalizeIntelligenceRequest } from "./agent.ts";
 import { createAuth } from "./auth.ts";
 import { BrowserService } from "./browser.ts";
 import { ComputerService, type DockerRunner } from "./computer.ts";
@@ -332,7 +332,9 @@ export async function createApp(
         "Configure a model and provider API key, or a valid AG-UI endpoint, to start chat",
         503,
       );
-    const response = await runtime.fetch(c.req.raw);
+    const response = await runtime.fetch(
+      await normalizeIntelligenceRequest(c.req.raw, c.get("owner")),
+    );
     // Runtime 1.70 emits SSE strings; a WHATWG Response body requires byte chunks.
     const encoder = new TextEncoder();
     const body = response.body?.pipeThrough(

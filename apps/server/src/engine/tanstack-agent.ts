@@ -35,11 +35,10 @@ function adapter(spec: string) {
         baseURL: process.env.OPENAI_BASE_URL,
         maxRetries: MODEL_MAX_RETRIES,
       };
-      // openaiText targets the Responses API (/v1/responses), which OpenAI's own
-      // API speaks but almost no third-party gateway does. A custom base URL
-      // means a gateway, so fall back to the older, widely compatible
-      // /v1/chat/completions wire format.
-      return process.env.OPENAI_BASE_URL
+      // OpenAI's Responses API remains the default. Some gateways only expose
+      // Chat Completions; opt into their wire format explicitly instead of
+      // inferring it from OPENAI_BASE_URL (which can point to a Responses API).
+      return process.env.OPENAI_API_PROTOCOL === "chat-completions"
         ? openaiChatCompletions(id as OpenAIChatModel, options)
         : openaiText(id as OpenAIChatModel, options);
     }

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { CopilotKitIntelligence } from "@copilotkit/runtime/v2";
+import { normalizeIntelligenceRequest, stableUuid, threadUuid } from "../apps/server/src/agent.ts";
 import { createApp } from "../apps/server/src/app.ts";
 import { createStore, type Store } from "../apps/server/src/db.ts";
 
@@ -36,6 +37,54 @@ after(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 
+test("local Intelligence user and thread IDs are stable RFC 4122 UUIDs", async () => {
+  const userId = stableUuid("local-user");
+  const threadId = threadUuid("local-user", "local-main");
+  assert.equal(userId, "3477cdab-1575-47bd-83c9-5a3c0b0e4883");
+  assert.equal(threadId, "667c7e5e-e709-4475-8e24-bbbc50f715dd");
+  assert.match(userId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(threadUuid("local-user", userId), userId);
+
+  const runBody = JSON.stringify({ threadId: "local-main", runId: "run-1" });
+  const run = await normalizeIntelligenceRequest(
+    new Request("http://localhost:8787/api/copilotkit/agent/default/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: runBody,
+    }),
+    "local-user",
+  );
+  assert.equal(new URL(run.url).pathname, "/api/copilotkit/agent/default/run");
+  assert.deepEqual(await run.json(), { threadId, runId: "run-1" });
+  assert.equal(
+    run.headers.get("content-length"),
+    String(new TextEncoder().encode(JSON.stringify({ threadId, runId: "run-1" })).byteLength),
+  );
+
+  const history = await normalizeIntelligenceRequest(
+    new Request("http://localhost:8787/api/copilotkit/threads/thread-1/messages"),
+    "local-user",
+  );
+  assert.equal(
+    new URL(history.url).pathname,
+    `/api/copilotkit/threads/${threadUuid("local-user", "thread-1")}/messages`,
+  );
+
+  const stop = await normalizeIntelligenceRequest(
+    new Request("http://localhost:8787/api/copilotkit/agent/default/stop/local-chat-7", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "user" }),
+    }),
+    "local-user",
+  );
+  assert.equal(
+    new URL(stop.url).pathname,
+    `/api/copilotkit/agent/default/stop/${threadUuid("local-user", "local-chat-7")}`,
+  );
+  assert.deepEqual(await stop.json(), { reason: "user" });
+});
+
 test("main chat is provisioned for the authenticated owner before the first run", async (t) => {
   const calls: Parameters<CopilotKitIntelligence["getOrCreateThread"]>[0][] = [];
   t.mock.method(
@@ -53,7 +102,7 @@ test("main chat is provisioned for the authenticated owner before the first run"
   assert.ok(
     calls.every(
       (call) =>
-        call.userId === "local-user" &&
+        call.userId === stableUuid("local-user") &&
         call.agentId === "default" &&
         call.threadId === first.threadId,
     ),
@@ -93,7 +142,7 @@ test("Rich Threads lists through CopilotKit, scopes by authenticated owner and p
   assert.equal(result.status, 200, await result.clone().text());
   assert.deepEqual(calls, [
     {
-      userId: "local-user",
+      userId: stableUuid("local-user"),
       agentId: "default",
       includeArchived: true,
       limit: 20,
@@ -130,8 +179,8 @@ test("native and web thread rename reaches the SDK without accepting a forged ow
   assert.equal(response.status, 200, await response.clone().text());
   assert.deepEqual(calls, [
     {
-      threadId: "thread-1",
-      userId: "local-user",
+      threadId: threadUuid("local-user", "thread-1"),
+      userId: stableUuid("local-user"),
       agentId: "default",
       updates: { name: "Weekend plans" },
     },
@@ -153,7 +202,13 @@ test("archive is authenticated and routed to CopilotKit", async (t) => {
     body: JSON.stringify({ agentId: "default" }),
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(calls, [{ threadId: "thread-1", userId: "local-user", agentId: "default" }]);
+  assert.deepEqual(calls, [
+    {
+      threadId: threadUuid("local-user", "thread-1"),
+      userId: stableUuid("local-user"),
+      agentId: "default",
+    },
+  ]);
 });
 
 test("history retains rich tool messages and provider failures remain errors", async (t) => {
@@ -182,7 +237,9 @@ test("history retains rich tool messages and provider failures remain errors", a
   });
   assert.equal(history.status, 200);
   assert.deepEqual((await history.json()).messages, messages);
-  assert.deepEqual(calls, [{ threadId: "thread-1", userId: "local-user" }]);
+  assert.deepEqual(calls, [
+    { threadId: threadUuid("local-user", "thread-1"), userId: stableUuid("local-user") },
+  ]);
   t.mock.method(CopilotKitIntelligence.prototype, "listThreads", async () => {
     throw new Error("Platform unavailable");
   });

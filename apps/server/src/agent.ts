@@ -36,37 +36,59 @@ export function threadUuid(owner: string, threadId: string) {
  */
 export async function normalizeIntelligenceRequest(request: Request, owner: string) {
   const url = new URL(request.url);
-  let mutated = false;
-  let body: string | undefined;
-  if (request.body !== null && request.headers.get("content-type")?.includes("application/json")) {
-    body = await request.text();
-    try {
-      const record = JSON.parse(body) as { threadId?: unknown };
-      if (typeof record.threadId === "string" && record.threadId) {
-        record.threadId = threadUuid(owner, record.threadId);
-        mutated = true;
-      }
-      body = JSON.stringify(record);
-    } catch {
-      // Not JSON: leave the body exactly as sent.
-    }
-  }
-  const parts = url.pathname.split("/");
+  const basePath = "/api/copilotkit";
+  const hasBasePath = url.pathname.startsWith(basePath);
+  const relativePath = hasBasePath ? url.pathname.slice(basePath.length) : url.pathname;
+  const parts = relativePath.split("/");
+  let mutatedPath = false;
   const isThreadId = (index: number) =>
     (parts[1] === "threads" && index === 2) || (parts[3] === "stop" && index === 4);
-  url.pathname = parts
+  url.pathname = `${hasBasePath ? basePath : ""}${parts
     .map((part, index) => {
       if (!isThreadId(index) || !part || UUID_PATTERN.test(part)) return part;
-      mutated = true;
+      mutatedPath = true;
       return threadUuid(owner, decodeURIComponent(part));
     })
-    .join("/");
-  if (!mutated) return request;
-  const headers = new Headers(request.headers);
-  if (body !== undefined) {
-    headers.set("content-length", String(new TextEncoder().encode(body).byteLength));
+    .join("/")}`;
+
+  let body: string | ArrayBuffer | undefined;
+  let bodyRead = false;
+  let mutatedBody = false;
+  const contentType = request.headers.get("content-type") ?? "";
+  if (request.body !== null && (contentType.includes("application/json") || mutatedPath)) {
+    bodyRead = true;
+    if (contentType.includes("application/json")) {
+      body = await request.text();
+      try {
+        const parsed: unknown = JSON.parse(body);
+        if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+          const record = parsed as { threadId?: unknown };
+          if (typeof record.threadId === "string" && record.threadId) {
+            record.threadId = threadUuid(owner, record.threadId);
+            body = JSON.stringify(record);
+            mutatedBody = true;
+          }
+        }
+      } catch {
+        // Keep malformed input intact so the runtime can return its normal validation error.
+      }
+    } else {
+      body = await request.arrayBuffer();
+    }
   }
-  return new Request(url, { method: request.method, headers, body });
+
+  if (!mutatedPath && !mutatedBody && !bodyRead) return request;
+  const headers = new Headers(request.headers);
+  if (body !== undefined && request.method !== "GET" && request.method !== "HEAD") {
+    const byteLength =
+      typeof body === "string" ? new TextEncoder().encode(body).byteLength : body.byteLength;
+    headers.set("content-length", String(byteLength));
+  }
+  return new Request(url, {
+    method: request.method,
+    headers,
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : body,
+  });
 }
 export function agentConfigured(config: Config) {
   return (

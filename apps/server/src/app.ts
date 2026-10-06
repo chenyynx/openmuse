@@ -7,7 +7,7 @@ import { cors } from "hono/cors";
 import { z } from "zod";
 import { emailDraftSchema, proposalSchema } from "../../../packages/domain/src/index.ts";
 import { ActionService } from "./actions.ts";
-import { agentConfigured, makeRuntime, normalizeIntelligenceRequest } from "./agent.ts";
+import { agentConfigured, makeRuntime, normalizeIntelligenceRequest, stableUuid } from "./agent.ts";
 import { createAuth } from "./auth.ts";
 import { BrowserService } from "./browser.ts";
 import { ComputerService, type DockerRunner } from "./computer.ts";
@@ -214,7 +214,7 @@ export async function createApp(
     try {
       await intelligence.getOrCreateThread({
         threadId: main.threadId,
-        userId: owner,
+        userId: stableUuid(owner),
         agentId: "default",
       });
     } catch {

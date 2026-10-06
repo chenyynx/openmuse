@@ -15,7 +15,11 @@ import {
 } from "@tanstack/ai";
 import { type AnthropicChatModel, anthropicText } from "@tanstack/ai-anthropic";
 import { type GeminiTextModel, geminiText } from "@tanstack/ai-gemini";
-import { type OpenAIChatModel, openaiText } from "@tanstack/ai-openai";
+import {
+  type OpenAIChatModel,
+  openaiChatCompletions,
+  openaiText,
+} from "@tanstack/ai-openai";
 import { map, mergeMap, type Observable } from "rxjs";
 import { z } from "zod";
 import { MODEL_MAX_RETRIES } from "../config.ts";
@@ -30,11 +34,19 @@ function adapter(spec: string) {
     );
   const id = model.trim();
   switch (provider.toLowerCase()) {
-    case "openai":
-      return openaiText(id as OpenAIChatModel, {
+    case "openai": {
+      const options = {
         baseURL: process.env.OPENAI_BASE_URL,
         maxRetries: MODEL_MAX_RETRIES,
-      });
+      };
+      // openaiText targets the Responses API (/v1/responses), which OpenAI's own
+      // API speaks but almost no third-party gateway does. A custom base URL
+      // means a gateway, so fall back to the older, widely compatible
+      // /v1/chat/completions wire format.
+      return process.env.OPENAI_BASE_URL
+        ? openaiChatCompletions(id as OpenAIChatModel, options)
+        : openaiText(id as OpenAIChatModel, options);
+    }
     case "anthropic":
       // The AI SDK base URL ends in /v1; the Anthropic SDK adds /v1 itself.
       return anthropicText(id as AnthropicChatModel, {

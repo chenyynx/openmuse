@@ -1,5 +1,6 @@
 import { ArrowUpRight, Check, ChevronRight, type LucideIcon, X } from "lucide-react-native";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
@@ -15,6 +16,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import i18n from "./locales";
 export const colors = {
   canvas: "#FCFCFC",
   card: "#FFFFFF",
@@ -256,6 +258,7 @@ export function Sheet({
   onClose: () => void;
   wide?: boolean;
 }) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const compact = width < 600;
@@ -297,7 +300,7 @@ export function Sheet({
               <Text style={s.title}>{title}</Text>
               {!!subtitle && <Text style={s.muted}>{subtitle}</Text>}
             </View>
-            <IconButton icon={X} label="Close details" onPress={onClose} />
+            <IconButton icon={X} label={t("ui.closeDetails")} onPress={onClose} />
           </View>
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -407,13 +410,14 @@ export function Mascot({
   size?: number;
   variant?: "sky" | "sand" | "lilac";
 }) {
+  const { t } = useTranslation();
   const palette = {
     sky: "#ECF5FA",
     sand: "#FAF0DF",
     lilac: "#F1ECF9",
   }[variant];
   return (
-    <View accessibilityLabel="OpenMuse capybara" style={{ width: size, height: size }}>
+    <View accessibilityLabel={t("ui.mascot")} style={{ width: size, height: size }}>
       <View
         style={{
           position: "absolute",
@@ -449,16 +453,16 @@ export function timeLabel(value: string, timeZone?: string) {
 export function relativeDate(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   return diff < 60_000
-    ? "Just now"
+    ? i18n.t("ui.justNow")
     : diff < 3600_000
-      ? `${Math.floor(diff / 60_000)}m ago`
+      ? i18n.t("ui.minutesAgo", { count: Math.floor(diff / 60_000) })
       : diff < 86400_000
-        ? `${Math.floor(diff / 3600_000)}h ago`
+        ? i18n.t("ui.hoursAgo", { count: Math.floor(diff / 3600_000) })
         : dateLabel(value);
 }
 
 export function resultSummary(value: string) {
   return /^Saved to (?:sample|local) sent mail(?: · .+)?$/.test(value)
-    ? "Reply saved in your local Sent mail."
+    ? i18n.t("ui.replySaved")
     : value;
 }

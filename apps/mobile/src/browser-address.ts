@@ -1,3 +1,5 @@
+import i18n from "./locales";
+
 export function browserAddress(value: string): string {
   const input = value.trim();
   try {
@@ -11,14 +13,14 @@ export function browserAddress(value: string): string {
       throw new Error("Invalid address");
     return url.href;
   } catch {
-    throw new Error("Enter a website address, like copilotkit.ai or https://news.ycombinator.com.");
+    throw new Error(i18n.t("browserAddress.invalid"));
   }
 }
 
 export function browserSite(value: string): string {
   try {
-    return new URL(value).hostname.replace(/^www\./, "") || "Browser";
+    return new URL(value).hostname.replace(/^www\./, "") || i18n.t("browserAddress.site");
   } catch {
-    return "Browser";
+    return i18n.t("browserAddress.site");
   }
 }

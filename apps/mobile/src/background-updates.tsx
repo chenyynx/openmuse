@@ -1,11 +1,13 @@
 import { ArrowRight, Bell, X } from "lucide-react-native";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 import { useAgentWorkspace } from "./agent-workspace";
 import { Button, Card, colors, ErrorNotice, resultSummary, s } from "./ui";
 import { useWorkspace } from "./workspace";
 
 export function BackgroundUpdates() {
+  const { t } = useTranslation();
   const { data, mutate } = useAgentWorkspace();
   const { open } = useWorkspace();
   const [error, setError] = useState("");
@@ -30,11 +32,11 @@ export function BackgroundUpdates() {
       <View style={[s.between, { gap: 12 }]}>
         <View style={[s.row, { gap: 7 }]}>
           <Bell size={14} color={colors.blueDark} />
-          <Text style={s.small}>An update for you</Text>
+          <Text style={s.small}>{t("backgroundUpdates.heading")}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dismiss background update"
+          accessibilityLabel={t("backgroundUpdates.dismiss")}
           disabled={busy}
           onPress={() => void dismiss()}
           hitSlop={10}
@@ -51,11 +53,11 @@ export function BackgroundUpdates() {
           icon={ArrowRight}
           onPress={() => update.taskId && open({ type: "task", taskId: update.taskId })}
         >
-          View task
+          {t("backgroundUpdates.viewTask")}
         </Button>
         {updates.length > 1 && (
           <Button small onPress={() => open({ type: "notifications" })}>
-            {updates.length - 1} more updates
+            {t("backgroundUpdates.moreUpdates", { count: updates.length - 1 })}
           </Button>
         )}
       </View>

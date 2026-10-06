@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, View } from "react-native";
 import DateFields from "./DateFields";
 import { isCompleteInstant, localDateTime, zonedInstant } from "./date-time";
@@ -16,6 +17,7 @@ export default function DateTimeEditor({
   allDay: boolean;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(value.slice(0, 10));
   const [time, setTime] = useState("09:00");
   const [error, setError] = useState("");
@@ -29,7 +31,7 @@ export default function DateTimeEditor({
         setTime(local.time);
       }
     } catch {
-      setError("Choose a valid time zone.");
+      setError(t("dateTimeEditor.invalidTimeZone"));
     }
   }, [value, timeZone, allDay]);
   function change(nextDate: string, nextTime: string) {

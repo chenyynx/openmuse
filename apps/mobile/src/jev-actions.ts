@@ -7,6 +7,7 @@ import {
   jevToolResultSchema,
   parseJevAction,
 } from "../../../packages/domain/src/jev";
+import i18n from "./locales";
 
 export function parseJevResult(value: unknown): JevToolResult | null {
   let result = value;
@@ -148,11 +149,13 @@ function panelForAction(messages: readonly unknown[], action: JevAction): JevPan
 export function displayJevUserMessage(text: string, precedingMessages: readonly unknown[]): string {
   if (!text.startsWith(jevActionPrefix)) return text;
   const action = actionFromText(text);
-  if (!action) return "Choice unavailable";
+  if (!action) return i18n.t("jevActions.choiceUnavailable");
   const option = panelForAction(precedingMessages, action)?.options.find(
     (candidate) => candidate.id === action.optionId,
   );
-  return option ? `Selected: ${option.label}` : "Choice unavailable";
+  return option
+    ? i18n.t("jevActions.selected", { label: option.label })
+    : i18n.t("jevActions.choiceUnavailable");
 }
 
 export function confirmedJevSelection(

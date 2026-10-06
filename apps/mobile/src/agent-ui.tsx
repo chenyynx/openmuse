@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Image, Linking, Pressable, Text, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import type { Artifact, BrowserSession } from "../../../packages/domain/src";
@@ -34,6 +35,7 @@ import type {
   RunEvent,
 } from "../../../packages/domain/src/agent";
 import { useAgentWorkspace } from "./agent-workspace";
+import i18n from "./locales";
 import { ActivityScreen, ConnectionsScreen } from "./screens";
 import {
   Button,
@@ -53,7 +55,49 @@ import {
 } from "./ui";
 import { useWorkspace } from "./workspace";
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  active: "agentUi.status.active",
+  accepted: "agentUi.status.accepted",
+  agent: "agentUi.status.agent",
+  approval: "agentUi.status.approval",
+  cancelled: "agentUi.status.cancelled",
+  change: "agentUi.status.change",
+  completed: "agentUi.status.completed",
+  concise: "agentUi.status.concise",
+  comparison: "agentUi.status.comparison",
+  contains: "agentUi.status.contains",
+  dismissed: "agentUi.status.dismissed",
+  document: "agentUi.status.document",
+  error: "agentUi.status.error",
+  failed: "agentUi.status.failed",
+  finance: "agentUi.status.finance",
+  lilac: "agentUi.status.lilac",
+  new: "agentUi.status.new",
+  observation: "agentUi.status.observation",
+pending: "agentUi.status.pending",
+  plan: "agentUi.status.plan",
+  price_below: "agentUi.status.priceBelow",
+  queued: "agentUi.status.queued",
+  report: "agentUi.status.report",
+  result: "agentUi.status.result",
+  running: "agentUi.status.running",
+  sand: "agentUi.status.sand",
+  scheduled: "agentUi.status.scheduled",
+  sky: "agentUi.status.sky",
+  status: "agentUi.status.status",
+  step: "agentUi.status.step",
+  stopped: "agentUi.status.stopped",
+  succeeded: "agentUi.status.succeeded",
+  thoughtful: "agentUi.status.thoughtful",
+  warm: "agentUi.status.warm",
+  waiting: "agentUi.status.waiting",
+  waiting_approval: "agentUi.status.waitingApproval",
+  waiting_input: "agentUi.status.waitingInput",
+};
+
 export function statusLabel(value: string) {
+  const key = STATUS_LABEL_KEYS[value];
+  if (key) return i18n.t(key);
   return value.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 function stamp(value?: string) {
@@ -64,7 +108,7 @@ function stamp(value?: string) {
         hour: "numeric",
         minute: "2-digit",
       })
-    : "Not checked yet";
+    : i18n.t("agentUi.notCheckedYet");
 }
 function errorText(e: unknown) {
   return e instanceof Error ? e.message : String(e);
@@ -73,19 +117,20 @@ function activeTask(task: AgentTask) {
   return !["succeeded", "failed", "cancelled"].includes(task.status);
 }
 export function AgentStatus() {
+  const { t } = useTranslation();
   const { data, error, refresh } = useAgentWorkspace();
   if (data?.worker.running && !error) return null;
   return (
     <View style={{ gap: 8 }}>
-      <ErrorNotice error={error ? `Agent updates unavailable. ${error}` : ""} />
+      <ErrorNotice error={error ? t("agentUi.agentStatus.error", { error }) : ""} />
       {!!error && (
         <Button small onPress={() => void refresh().catch(() => {})}>
-          Reconnect agent
+          {t("agentUi.agentStatus.reconnect")}
         </Button>
       )}
       {!data && !error && <ActivityIndicator color={colors.blueDark} />}
       {data && !data.worker.running && (
-        <Text style={s.small}>Worker is offline. Saved work will continue when it reconnects.</Text>
+        <Text style={s.small}>{t("agentUi.agentStatus.workerOffline")}</Text>
       )}
     </View>
   );
@@ -99,6 +144,7 @@ export function TaskCard({
   compact?: boolean;
   onOpen?: () => void;
 }) {
+  const { t } = useTranslation();
   const { open } = useWorkspace();
   const done = task.plan.filter((step) => step.status === "succeeded").length;
   const next = task.plan.find((step) => ["running", "waiting"].includes(step.status));
@@ -106,7 +152,7 @@ export function TaskCard({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open task: ${task.title}`}
+      accessibilityLabel={t("agentUi.taskCard.openLabel", { title: task.title })}
       onPress={() => {
         onOpen?.();
         open({ type: "task", taskId: task.id });
@@ -133,7 +179,9 @@ export function TaskCard({
             <Text style={s.heading}>{task.title}</Text>
             <Text style={s.small}>
               {statusLabel(task.status)}
-              {task.plan.length ? ` · ${done}/${task.plan.length} steps` : ""}
+              {task.plan.length
+                ? ` · ${t("agentUi.taskCard.steps", { done, total: task.plan.length })}`
+                : ""}
             </Text>
           </View>
           <ChevronRight size={17} color={colors.muted} />
@@ -157,7 +205,9 @@ export function TaskCard({
         )}
         {waiting && (
           <Text style={[s.small, { color: colors.blueDark, fontWeight: "600" }]}>
-            {task.status === "waiting_approval" ? "Review requested" : "Your input is needed"}
+            {task.status === "waiting_approval"
+              ? t("agentUi.taskCard.reviewRequested")
+              : t("agentUi.taskCard.inputNeeded")}
           </Text>
         )}
       </Card>
@@ -180,8 +230,14 @@ export function ChatWork() {
   );
 }
 export function AgentActivityScreen() {
+  const { t } = useTranslation();
   const { data } = useAgentWorkspace();
   const [filter, setFilter] = useState("All");
+  const filterLabels: Record<string, string> = {
+    All: t("agentUi.activity.filterAll"),
+    "In progress": t("agentUi.activity.filterInProgress"),
+    Finished: t("agentUi.activity.filterFinished"),
+  };
   const tasks = [...(data?.tasks || [])]
     .filter(
       (task) =>
@@ -194,7 +250,7 @@ export function AgentActivityScreen() {
       <View style={[s.row, { gap: 8 }]}>
         {["All", "In progress", "Finished"].map((item) => (
           <Button key={item} small primary={filter === item} onPress={() => setFilter(item)}>
-            {item}
+            {filterLabels[item]}
           </Button>
         ))}
       </View>
@@ -204,16 +260,17 @@ export function AgentActivityScreen() {
       {!tasks.length && (
         <Empty
           icon={ListChecks}
-          title="A place for the work"
-          detail="Delegate a task in Chat. Its plan, progress and results stay here."
+          title={t("agentUi.activity.emptyTitle")}
+          detail={t("agentUi.activity.emptyDetail")}
         />
       )}
-      <SectionHeading title="Reviews & receipts" />
+      <SectionHeading title={t("agentUi.activity.reviewsHeading")} />
       <ActivityScreen />
     </View>
   );
 }
 export function EvidenceList({ items }: { items: Evidence[] }) {
+  const { t } = useTranslation();
   const { workspace, open } = useWorkspace();
   const [error, setError] = useState("");
   return (
@@ -234,7 +291,7 @@ export function EvidenceList({ items }: { items: Evidence[] }) {
                 void Linking.openURL(item.url || "").catch((e) => setError(errorText(e)))
               }
             >
-              Open source
+              {t("agentUi.evidence.openSource")}
             </Button>
           )}
           {item.kind === "mail" && workspace.mail.some((mail) => mail.id === item.id) && (
@@ -245,7 +302,7 @@ export function EvidenceList({ items }: { items: Evidence[] }) {
                 if (mail) open({ type: "mail", mail });
               }}
             >
-              View email
+              {t("agentUi.evidence.viewEmail")}
             </Button>
           )}
           {item.kind === "file" && workspace.files.some((file) => file.id === item.id) && (
@@ -256,7 +313,7 @@ export function EvidenceList({ items }: { items: Evidence[] }) {
                 if (file) open({ type: "file", file });
               }}
             >
-              View file
+              {t("agentUi.evidence.viewFile")}
             </Button>
           )}
         </View>
@@ -266,6 +323,7 @@ export function EvidenceList({ items }: { items: Evidence[] }) {
   );
 }
 export function TaskDetail({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
   const { api, workspace, close, open, refresh: refreshWorkspace } = useWorkspace();
   const { data, mutate } = useAgentWorkspace();
   const [detail, setDetail] = useState<{
@@ -333,11 +391,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
             (value) => typeof value !== "string" && typeof value !== "boolean",
           )
         )
-          throw new Error("Form fields must be a JSON object with text or true/false values.");
+          throw new Error(t("agentUi.taskDetail.formFieldsInvalid"));
         parsed = raw as Record<string, string | boolean>;
       }
       await act("input", {
-        answer: answer.trim() || "Provided the requested fields.",
+        answer: answer.trim() || t("agentUi.taskDetail.providedFields"),
         fields: parsed,
       });
     } catch (e) {
@@ -351,7 +409,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
       await refreshWorkspace();
       const snapshot = await api.request<typeof workspace>("/api/workspace");
       const action = snapshot.actions.find((item) => item.id === task?.actionId);
-      if (!action) throw new Error("This review is not available yet. Refresh and try again.");
+      if (!action) throw new Error(t("agentUi.taskDetail.reviewUnavailable"));
       open({ type: "review", action });
     } catch (e) {
       setError(errorText(e));
@@ -371,9 +429,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     .filter(Boolean);
   return (
     <Sheet
-      title={task?.title || "Task"}
+      title={task?.title || t("agentUi.taskDetail.taskTitle")}
       subtitle={
-        task ? `${statusLabel(task.status)} · ${stamp(task.updatedAt)}` : "Loading saved progress…"
+        task
+          ? `${statusLabel(task.status)} · ${stamp(task.updatedAt)}`
+          : t("agentUi.taskDetail.loadingProgress")
       }
       onClose={close}
     >
@@ -395,7 +455,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 busy={busy}
                 onPress={() => void act("control", { action: "pause" })}
               >
-                Pause
+                {t("agentUi.common.pause")}
               </Button>
             )}
             {task.status === "paused" && (
@@ -405,7 +465,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 busy={busy}
                 onPress={() => void act("control", { action: "resume" })}
               >
-                Resume
+                {t("agentUi.common.resume")}
               </Button>
             )}
             {task.status === "failed" && (
@@ -415,7 +475,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 busy={busy}
                 onPress={() => void act("control", { action: "retry" })}
               >
-                Retry task
+                {t("agentUi.taskDetail.retryTask")}
               </Button>
             )}
             {activeTask(task) && (
@@ -426,22 +486,22 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 busy={busy}
                 onPress={() => void act("control", { action: "cancel" })}
               >
-                Cancel task
+                {t("agentUi.taskDetail.cancelTask")}
               </Button>
             )}
           </View>
           {task.status === "waiting_approval" && (
             <Card style={{ backgroundColor: colors.lavender, gap: 12 }}>
-              <Text style={s.heading}>Ready for your review</Text>
-              <Text style={s.muted}>Review the exact action and account before it proceeds.</Text>
+              <Text style={s.heading}>{t("agentUi.taskDetail.readyForReview")}</Text>
+              <Text style={s.muted}>{t("agentUi.taskDetail.reviewDetail")}</Text>
               <Button primary busy={busy} onPress={() => void review()}>
-                Review action
+                {t("agentUi.taskDetail.reviewAction")}
               </Button>
             </Card>
           )}
           {task.status === "waiting_input" && (
             <Card style={{ backgroundColor: colors.sky, gap: 10 }}>
-              <Text style={s.heading}>{task.question || "A detail from you will help"}</Text>
+              <Text style={s.heading}>{task.question || t("agentUi.taskDetail.detailNeeded")}</Text>
               {fieldNames.map((name) =>
                 missing.some(
                   (f) => typeof f === "object" && f && f.name === name && f.type === "checkbox",
@@ -465,26 +525,26 @@ export function TaskDetail({ taskId }: { taskId: string }) {
               )}
               {!fieldNames.length && (
                 <Field
-                  label="Your answer"
+                  label={t("agentUi.taskDetail.yourAnswer")}
                   value={answer}
                   onChangeText={setAnswer}
                   multiline
-                  placeholder="Add the missing details…"
+                  placeholder={t("agentUi.taskDetail.addDetailsPlaceholder")}
                 />
               )}
               {task.kind === "document" && !fieldNames.length && (
                 <>
                   <Button small onPress={() => setShowFieldJson(!showFieldJson)}>
-                    Form field values
+                    {t("agentUi.taskDetail.formFieldValues")}
                   </Button>
                   {showFieldJson && (
                     <Field
-                      label="Fields (JSON: field name to value)"
+                      label={t("agentUi.taskDetail.fieldsJsonLabel")}
                       value={fieldJson}
                       onChangeText={setFieldJson}
                       multiline
                       autoCapitalize="none"
-                      placeholder={'{"full_name":"Your name","consent":true}'}
+                      placeholder={t("agentUi.taskDetail.fieldsJsonPlaceholder")}
                     />
                   )}
                 </>
@@ -495,13 +555,13 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 disabled={!answer.trim() && !Object.keys(fields).length && !fieldJson.trim()}
                 onPress={() => void submitInput()}
               >
-                Continue task
+                {t("agentUi.taskDetail.continueTask")}
               </Button>
             </Card>
           )}
           {!!task.plan.length && (
             <Card style={{ gap: 15 }}>
-              <Text style={s.heading}>Plan</Text>
+              <Text style={s.heading}>{t("agentUi.taskDetail.planHeading")}</Text>
               {task.plan.map((step, index) => (
                 <View key={step.id} style={[s.row, { gap: 10, alignItems: "flex-start" }]}>
                   <Text
@@ -533,11 +593,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           <ErrorNotice error={task.error ?? undefined} />
           {detail?.browsers?.map((browser) => (
             <Card key={browser.id} style={{ gap: 10 }}>
-              <Text style={s.heading}>{browser.title || "Agent browser"}</Text>
+              <Text style={s.heading}>{browser.title || t("agentUi.taskDetail.agentBrowser")}</Text>
               <Text style={s.small}>{browser.url}</Text>
               {browser.status === "active" && browser.previewUrl && (
                 <Image
-                  accessibilityLabel="Agent browser preview"
+                  accessibilityLabel={t("agentUi.taskDetail.browserPreviewLabel")}
                   source={{ uri: api.url(browser.previewUrl) }}
                   style={{ width: "100%", aspectRatio: 1.6, borderRadius: 12 }}
                 />
@@ -561,8 +621,8 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 }}
               >
                 {["running", "scheduled", "queued"].includes(task.status)
-                  ? "Pause and open browser"
-                  : "Open browser"}
+                  ? t("agentUi.taskDetail.pauseAndOpenBrowser")
+                  : t("agentUi.taskDetail.openBrowser")}
               </Button>
             </Card>
           ))}
@@ -570,7 +630,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
             <LinkRow
               key={file.id}
               title={file.name}
-              detail={`${file.pageCount} pages · PDF`}
+              detail={t("agentUi.taskDetail.filePages", { count: file.pageCount })}
               icon={FileText}
               onPress={() => open({ type: "file", file })}
             />
@@ -584,11 +644,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           ))}
           {!!task.evidence.length && (
             <View style={{ gap: 14 }}>
-              <Text style={s.heading}>Sources</Text>
+              <Text style={s.heading}>{t("agentUi.taskDetail.sourcesHeading")}</Text>
               <EvidenceList items={task.evidence} />
             </View>
           )}
-          <Text style={s.heading}>Timeline</Text>
+          <Text style={s.heading}>{t("agentUi.taskDetail.timelineHeading")}</Text>
           {detail?.events.map((event) => (
             <View
               key={event.id}
@@ -604,7 +664,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
             </View>
           ))}
           {!detail?.events.length && (
-            <Text style={s.muted}>The worker will record each step here.</Text>
+            <Text style={s.muted}>{t("agentUi.taskDetail.timelineEmpty")}</Text>
           )}
         </View>
       )}
@@ -626,6 +686,7 @@ function display(value: unknown): string {
         : JSON.stringify(value, null, 2) || "";
 }
 export function ArtifactCard({ artifact }: { artifact: AgentArtifact }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   if (artifact.kind === "finance") return <FinanceArtifact artifact={artifact} />;
   const rows = Object.entries(artifact.data);
@@ -680,12 +741,13 @@ export function ArtifactCard({ artifact }: { artifact: AgentArtifact }) {
         </View>
       ))}
       <Button small onPress={() => setExpanded(!expanded)}>
-        {expanded ? "Show summary" : "Explore full result"}
+        {expanded ? t("agentUi.artifact.showSummary") : t("agentUi.artifact.exploreFull")}
       </Button>
     </Card>
   );
 }
 function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
+  const { t } = useTranslation();
   const [details, setDetails] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { mutate } = useAgentWorkspace();
@@ -700,8 +762,14 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
       await mutate("/goals", {
         title: goalTitle.trim(),
         category: "Finances",
-        description: `Inspired by ${artifact.title}: ${artifact.summary}`,
-        milestones: ["Choose a savings target", "Review spending each week"],
+        description: t("agentUi.finance.goalDescription", {
+          title: artifact.title,
+          summary: artifact.summary,
+        }),
+        milestones: [
+          t("agentUi.finance.milestoneSavingsTarget"),
+          t("agentUi.finance.milestoneReviewWeekly"),
+        ],
       });
       setGoalSaved(true);
     } catch (error) {
@@ -725,7 +793,7 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Open finance tracker: ${artifact.title}`}
+        accessibilityLabel={t("agentUi.finance.openLabel", { title: artifact.title })}
         accessibilityState={{ expanded: details }}
         onPress={() => setDetails(!details)}
       >
@@ -751,17 +819,17 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
             </Svg>
           </View>
           <Text style={{ color: "#D4DCFC", fontSize: 11, lineHeight: 18, marginBottom: 20 }}>
-            Read from your imported transactions.{"\n"}
+            {t("agentUi.finance.readFrom")} {"\n"}
             {String(period?.from ?? "")} — {String(period?.to ?? "")}
             {"\n"}
-            {transactions.length} transactions, categorized and summarized.
+            {t("agentUi.finance.transactionsSummary", { count: transactions.length })}
           </Text>
           <View style={[s.row, { gap: 7 }]}>
             {(
               [
-                ["Income", "income"],
-                ["Spending", "spending"],
-                ["Remaining", "saved"],
+                [t("agentUi.finance.income"), "income"],
+                [t("agentUi.finance.spending"), "spending"],
+                [t("agentUi.finance.remaining"), "saved"],
               ] as const
             ).map(([label, key]) => (
               <View
@@ -783,7 +851,9 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
                 >
                   {amount(artifact.data[key])}
                 </Text>
-                <Text style={{ color: "#7E8289", fontSize: 8, marginTop: 4 }}>source currency</Text>
+                <Text style={{ color: "#7E8289", fontSize: 8, marginTop: 4 }}>
+                  {t("agentUi.finance.sourceCurrency")}
+                </Text>
               </View>
             ))}
           </View>
@@ -791,15 +861,15 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
         <View style={[s.row, { gap: 11, paddingHorizontal: 8, paddingTop: 13, paddingBottom: 4 }]}>
           <Text style={{ fontSize: 25 }}>💸</Text>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[s.text, { fontWeight: "600" }]}>Finance tracker</Text>
-            <Text style={s.small}>Spending, savings, and a plan for what’s next.</Text>
+            <Text style={[s.text, { fontWeight: "600" }]}>{t("agentUi.finance.trackerTitle")}</Text>
+            <Text style={s.small}>{t("agentUi.finance.trackerDetail")}</Text>
           </View>
           <ChevronRight size={17} color={colors.muted} />
         </View>
       </Pressable>
       {details && (
         <View style={{ gap: 16, padding: 10 }}>
-          <Text style={s.label}>Where your money went</Text>
+          <Text style={s.label}>{t("agentUi.finance.whereWent")}</Text>
           {categories.map((category) => {
             const row = record(category);
             if (!row) return null;
@@ -822,18 +892,16 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
               </View>
             );
           })}
-          <Text style={s.small}>
-            Amounts use your source currency. This summary covers the imported dates.
-          </Text>
+          <Text style={s.small}>{t("agentUi.finance.currencyNote")}</Text>
           {goalSaved ? (
-            <Text style={s.text}>Your savings goal is saved in Goals.</Text>
+            <Text style={s.text}>{t("agentUi.finance.goalSaved")}</Text>
           ) : (
             <View style={{ gap: 10 }}>
               <Field
-                label="Turn this into a savings goal"
+                label={t("agentUi.finance.goalLabel")}
                 value={goalTitle}
                 onChangeText={setGoalTitle}
-                placeholder="What would you like to save for?"
+                placeholder={t("agentUi.finance.goalPlaceholder")}
               />
               <ErrorNotice error={goalError} />
               <Button
@@ -842,12 +910,14 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
                 disabled={!goalTitle.trim()}
                 onPress={() => void saveGoal()}
               >
-                Create savings goal
+                {t("agentUi.finance.createGoal")}
               </Button>
             </View>
           )}
           <Button small onPress={() => setExpanded(!expanded)}>
-            {expanded ? "Hide transactions" : "View transactions"}
+            {expanded
+              ? t("agentUi.finance.hideTransactions")
+              : t("agentUi.finance.viewTransactions")}
           </Button>
           {expanded &&
             transactions.slice(0, 100).map((transaction) => {
@@ -865,9 +935,7 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
               ) : null;
             })}
           {expanded && transactions.length > 100 && (
-            <Text style={s.small}>
-              Showing the first 100 transactions. The totals include every row.
-            </Text>
+            <Text style={s.small}>{t("agentUi.finance.firstHundredNote")}</Text>
           )}
         </View>
       )}
@@ -875,6 +943,7 @@ function FinanceArtifact({ artifact }: { artifact: AgentArtifact }) {
   );
 }
 export function DelegateSheet() {
+  const { t } = useTranslation();
   const { workspace, close, open } = useWorkspace();
   const { delegate } = useAgentWorkspace();
   const [kind, setKind] = useState<AgentTask["kind"]>("plan");
@@ -901,33 +970,33 @@ export function DelegateSheet() {
   }
   return (
     <Sheet
-      title="Hand over an outcome"
-      subtitle="OpenMuse saves a plan and keeps working on the server."
+      title={t("agentUi.delegate.title")}
+      subtitle={t("agentUi.delegate.subtitle")}
       onClose={close}
     >
       <View style={[s.row, { flexWrap: "wrap", gap: 8, marginBottom: 20 }]}>
         {(["plan", "document", "finance", "agent"] as const).map((item) => (
           <Button small primary={kind === item} key={item} onPress={() => setKind(item)}>
-            {item === "agent" ? "General task" : statusLabel(item)}
+            {item === "agent" ? t("agentUi.delegate.generalTask") : statusLabel(item)}
           </Button>
         ))}
       </View>
       <Field
-        label="What would you like done?"
+        label={t("agentUi.delegate.promptLabel")}
         value={prompt}
         onChangeText={setPrompt}
         multiline
         placeholder={
           kind === "document"
-            ? "Fill the attached form and prepare a reply for my review"
+            ? t("agentUi.delegate.documentPlaceholder")
             : kind === "finance"
-              ? "Summarize my spending and suggest a savings plan"
-              : "Make a practical plan for my week"
+              ? t("agentUi.delegate.financePlaceholder")
+              : t("agentUi.delegate.planPlaceholder")
         }
       />
       {kind === "document" && (
         <View style={{ gap: 8, marginBottom: 18 }}>
-          <Text style={s.heading}>Choose the email with the PDF</Text>
+          <Text style={s.heading}>{t("agentUi.delegate.chooseEmail")}</Text>
           {workspace.mail
             .filter((mail) => mail.attachments.length)
             .map((mail) => (
@@ -939,16 +1008,14 @@ export function DelegateSheet() {
               />
             ))}
           {!workspace.mail.some((mail) => mail.attachments.length) && (
-            <Text style={s.muted}>
-              Connect mail in Apps and select a message with a PDF attachment.
-            </Text>
+            <Text style={s.muted}>{t("agentUi.delegate.connectMailHint")}</Text>
           )}
         </View>
       )}
       {kind === "finance" && (
         <>
           <Field
-            label="Transaction CSV"
+            label={t("agentUi.delegate.csvLabel")}
             value={csv}
             onChangeText={setCsv}
             multiline
@@ -963,20 +1030,14 @@ export function DelegateSheet() {
                 )
               }
             >
-              Try example transactions
+              {t("agentUi.delegate.tryExample")}
             </Button>
           )}
-          <Text style={[s.small, { marginVertical: 12 }]}>
-            Positive amounts are expenses; negative amounts are income. Imported data only. No bank
-            connection is implied.
-          </Text>
+          <Text style={[s.small, { marginVertical: 12 }]}>{t("agentUi.delegate.csvHint")}</Text>
         </>
       )}
       {kind === "agent" && !workspace.runtime.configured && (
-        <Text style={[s.muted, { marginBottom: 16 }]}>
-          General tasks and plans require a configured model. Document jobs, page watches and
-          spending summaries have guided workflows.
-        </Text>
+        <Text style={[s.muted, { marginBottom: 16 }]}>{t("agentUi.delegate.modelRequiredHint")}</Text>
       )}
       <ErrorNotice error={error} />
       <Button
@@ -989,12 +1050,13 @@ export function DelegateSheet() {
         }
         onPress={() => void submit()}
       >
-        Delegate task
+        {t("agentUi.delegate.submit")}
       </Button>
     </Sheet>
   );
 }
 export function IdeasScreen() {
+  const { t } = useTranslation();
   const { data, mutate } = useAgentWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1014,9 +1076,9 @@ export function IdeasScreen() {
     <View style={{ gap: 20 }}>
       <AgentStatus />
       <View style={s.between}>
-        <Text style={s.small}>Inspired by your connected apps</Text>
+        <Text style={s.small}>{t("agentUi.ideas.inspiredBy")}</Text>
         <Button small icon={RefreshCw} busy={busy} onPress={() => void refreshIdeas()}>
-          Find ideas
+          {t("agentUi.ideas.findIdeas")}
         </Button>
       </View>
       <ErrorNotice error={error} />
@@ -1026,8 +1088,8 @@ export function IdeasScreen() {
       {!ideas.length && (
         <Empty
           icon={Lightbulb}
-          title="Room for a good idea"
-          detail="Find ideas from the sources you have granted access to. Each suggestion includes its evidence."
+          title={t("agentUi.ideas.emptyTitle")}
+          detail={t("agentUi.ideas.emptyDetail")}
         />
       )}
       {(data?.ideas || [])
@@ -1035,7 +1097,7 @@ export function IdeasScreen() {
         .map((idea) => (
           <Card key={idea.id} style={{ gap: 7 }}>
             <Text style={s.heading}>{idea.title}</Text>
-            <Chip tint={colors.green}>Started</Chip>
+            <Chip tint={colors.green}>{t("agentUi.ideas.started")}</Chip>
             {!!idea.taskId && <TaskLink taskId={idea.taskId} />}
           </Card>
         ))}
@@ -1043,6 +1105,7 @@ export function IdeasScreen() {
   );
 }
 function TaskLink({ taskId, onOpen }: { taskId: string; onOpen?: () => void }) {
+  const { t } = useTranslation();
   const { open } = useWorkspace();
   return (
     <Button
@@ -1053,11 +1116,12 @@ function TaskLink({ taskId, onOpen }: { taskId: string; onOpen?: () => void }) {
         open({ type: "task", taskId });
       }}
     >
-      View task
+      {t("agentUi.common.viewTask")}
     </Button>
   );
 }
 function IdeaCard({ idea }: { idea: Idea }) {
+  const { t } = useTranslation();
   const { mutate } = useAgentWorkspace();
   const { open } = useWorkspace();
   const [expanded, setExpanded] = useState(false);
@@ -1081,7 +1145,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
     <View style={{ paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: colors.line }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`View idea: ${idea.title}`}
+        accessibilityLabel={t("agentUi.idea.viewLabel", { title: idea.title })}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded(!expanded)}
         style={{ flexDirection: "row", gap: 14 }}
@@ -1107,7 +1171,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
           <EvidenceList items={idea.evidence} />
           {editing && (
             <Field
-              label="What should OpenMuse do?"
+              label={t("agentUi.idea.promptLabel")}
               value={prompt}
               onChangeText={setPrompt}
               multiline
@@ -1121,13 +1185,13 @@ function IdeaCard({ idea }: { idea: Idea }) {
               disabled={!prompt.trim()}
               onPress={() => void act("accept")}
             >
-              Start this
+              {t("agentUi.idea.start")}
             </Button>
             <Button disabled={busy} onPress={() => setEditing(!editing)}>
-              {editing ? "Keep edits" : "Edit"}
+              {editing ? t("agentUi.idea.keepEdits") : t("agentUi.common.edit")}
             </Button>
             <Button disabled={busy} onPress={() => void act("dismiss")}>
-              Dismiss
+              {t("agentUi.idea.dismiss")}
             </Button>
           </View>
         </View>
@@ -1136,6 +1200,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 export function GoalsScreen() {
+  const { t } = useTranslation();
   const { data } = useAgentWorkspace();
   const [adding, setAdding] = useState<string>();
   const [selectedGoal, setSelectedGoal] = useState<string>();
@@ -1160,17 +1225,17 @@ export function GoalsScreen() {
                 backgroundColor: "#24A46B",
               }}
             />
-            <Text style={[s.heading, { color: "#189A58" }]}>Tracking</Text>
+            <Text style={[s.heading, { color: "#189A58" }]}>{t("agentUi.goals.tracking")}</Text>
           </View>
           <Button small icon={Plus} onPress={() => setAdding("Tracking")}>
-            Track
+            {t("agentUi.goals.track")}
           </Button>
         </View>
         {(showAll ? monitors : monitors.slice(0, 3)).map((item) => (
           <Pressable
             key={item.id}
             accessibilityRole="button"
-            accessibilityLabel={`Open tracking: ${item.title}`}
+            accessibilityLabel={t("agentUi.goals.openTrackingLabel", { title: item.title })}
             onPress={() => setSelectedMonitor(item.id)}
             style={[s.row, { gap: 12, paddingVertical: 13 }]}
           >
@@ -1179,7 +1244,7 @@ export function GoalsScreen() {
               <Text style={s.text}>{item.title}</Text>
               <Text numberOfLines={1} style={s.muted}>
                 {item.status === "active"
-                  ? `Checking every ${item.intervalMinutes} minutes`
+                  ? t("agentUi.goals.checkingEvery", { minutes: item.intervalMinutes })
                   : statusLabel(item.status)}
               </Text>
             </View>
@@ -1188,12 +1253,14 @@ export function GoalsScreen() {
         ))}
         {!monitors.length && (
           <Text style={[s.muted, { paddingVertical: 10 }]}>
-            Ticket prices, a reservation, a page you’re watching.
+            {t("agentUi.goals.trackingEmpty")}
           </Text>
         )}
         {monitors.length > 3 && (
           <Button small onPress={() => setShowAll(!showAll)}>
-            {showAll ? "Show less" : `Show ${monitors.length - 3} more`}
+            {showAll
+              ? t("agentUi.goals.showLess")
+              : t("agentUi.goals.showMore", { count: monitors.length - 3 })}
           </Button>
         )}
       </View>
@@ -1210,13 +1277,13 @@ export function GoalsScreen() {
               backgroundColor: "#3D9BDE",
             }}
           />
-          <Text style={[s.heading, { color: colors.blueDark }]}>Goals</Text>
+          <Text style={[s.heading, { color: colors.blueDark }]}>{t("agentUi.goals.goalsHeading")}</Text>
         </View>
         {data?.goals.map((item) => (
           <Pressable
             key={item.id}
             accessibilityRole="button"
-            accessibilityLabel={`Open goal: ${item.title}`}
+            accessibilityLabel={t("agentUi.goals.openGoalLabel", { title: item.title })}
             onPress={() => setSelectedGoal(item.id)}
             style={[s.row, { gap: 12, paddingVertical: 13 }]}
           >
@@ -1236,33 +1303,35 @@ export function GoalsScreen() {
         ))}
         {!data?.goals.length && (
           <Text style={[s.muted, { paddingVertical: 10 }]}>
-            Big plans start with one small step.
+            {t("agentUi.goals.goalsEmpty")}
           </Text>
         )}
       </View>
       <View style={{ height: 1, backgroundColor: colors.line }} />
-      <Text style={s.heading}>Create a goal</Text>
+      <Text style={s.heading}>{t("agentUi.goals.createHeading")}</Text>
       {[
-        { name: "Health", icon: Heart },
-        { name: "Relationships", icon: Users },
-        { name: "Finances", icon: CircleDollarSign },
-        { name: "Something else", icon: Target },
+        { name: "Health", label: t("agentUi.goals.categoryHealth"), icon: Heart },
+        { name: "Relationships", label: t("agentUi.goals.categoryRelationships"), icon: Users },
+        { name: "Finances", label: t("agentUi.goals.categoryFinances"), icon: CircleDollarSign },
+        { name: "Something else", label: t("agentUi.goals.categoryOther"), icon: Target },
       ].map((item) => (
         <Pressable
           key={item.name}
           accessibilityRole="button"
-          accessibilityLabel={`Create ${item.name.toLowerCase()} goal`}
+          accessibilityLabel={t("agentUi.goals.createCategoryLabel", { category: item.label })}
           onPress={() => setAdding(item.name)}
           style={[s.row, { gap: 12, minHeight: 38 }]}
         >
           <item.icon size={23} color="#989C9F" />
-          <Text style={[s.text, { flex: 1, color: "#666A6D" }]}>{item.name}</Text>
+          <Text style={[s.text, { flex: 1, color: "#666A6D" }]}>{item.label}</Text>
           <Plus size={18} color="#989C9F" />
         </Pressable>
       ))}
       {adding && (
         <Sheet
-          title={adding === "Tracking" ? "Track something" : "Create a goal"}
+          title={
+            adding === "Tracking" ? t("agentUi.goals.trackSheetTitle") : t("agentUi.goals.sheetTitle")
+          }
           onClose={() => setAdding(undefined)}
         >
           {adding === "Tracking" ? (
@@ -1286,6 +1355,7 @@ export function GoalsScreen() {
   );
 }
 function GoalForm({ onDone, category }: { onDone: () => void; category?: string }) {
+  const { t } = useTranslation();
   const { mutate } = useAgentWorkspace();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1315,31 +1385,32 @@ function GoalForm({ onDone, category }: { onDone: () => void; category?: string 
   return (
     <Card>
       <Field
-        label="Your goal"
+        label={t("agentUi.goalForm.titleLabel")}
         value={title}
         onChangeText={setTitle}
-        placeholder="Build a three-month emergency fund"
+        placeholder={t("agentUi.goalForm.titlePlaceholder")}
       />
       <Field
-        label="What does success look like?"
+        label={t("agentUi.goalForm.successLabel")}
         value={description}
         onChangeText={setDescription}
         multiline
       />
       <Field
-        label="Milestones (one per line)"
+        label={t("agentUi.goalForm.milestonesLabel")}
         value={milestones}
         onChangeText={setMilestones}
         multiline
       />
       <ErrorNotice error={error} />
       <Button primary disabled={!title.trim()} busy={busy} onPress={() => void save()}>
-        Create goal
+        {t("agentUi.goalForm.create")}
       </Button>
     </Card>
   );
 }
 function GoalCard({ goal, onOpenTask }: { goal: Goal; onOpenTask?: () => void }) {
+  const { t } = useTranslation();
   const { data, mutate, delegate } = useAgentWorkspace();
   const { open } = useWorkspace();
   const [busy, setBusy] = useState(false);
@@ -1361,8 +1432,11 @@ function GoalCard({ goal, onOpenTask }: { goal: Goal; onOpenTask?: () => void })
     setError("");
     try {
       const task = await delegate({
-        title: `Plan: ${goal.title}`,
-        prompt: `Create a practical plan for this goal: ${goal.title}. ${goal.description}`,
+        title: t("agentUi.goalCard.planTaskTitle", { title: goal.title }),
+        prompt: t("agentUi.goalCard.planTaskPrompt", {
+          title: goal.title,
+          description: goal.description,
+        }),
         kind: "plan",
         goalId: goal.id,
         input: {},
@@ -1385,7 +1459,10 @@ function GoalCard({ goal, onOpenTask }: { goal: Goal; onOpenTask?: () => void })
       </View>
       <Text style={s.muted}>{goal.description}</Text>
       <Text style={s.small}>
-        {done} of {goal.milestones.length} milestones
+        {t("agentUi.goalCard.milestonesProgress", {
+          done,
+          total: goal.milestones.length,
+        })}
       </Text>
       {goal.milestones.map((milestone) => (
         <CheckRow
@@ -1409,15 +1486,15 @@ function GoalCard({ goal, onOpenTask }: { goal: Goal; onOpenTask?: () => void })
           busy={busy}
           onPress={() => void update({ status: goal.status === "active" ? "paused" : "active" })}
         >
-          {goal.status === "active" ? "Pause" : "Resume"}
+          {goal.status === "active" ? t("agentUi.common.pause") : t("agentUi.common.resume")}
         </Button>
         {goal.status !== "completed" && (
           <Button small busy={busy} onPress={() => void update({ status: "completed" })}>
-            Complete goal
+            {t("agentUi.goalCard.completeGoal")}
           </Button>
         )}
         <Button small primary busy={busy} onPress={() => void plan()}>
-          Plan next steps
+          {t("agentUi.goalCard.planNextSteps")}
         </Button>
       </View>
       {data?.tasks
@@ -1429,6 +1506,7 @@ function GoalCard({ goal, onOpenTask }: { goal: Goal; onOpenTask?: () => void })
   );
 }
 function MonitorForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const { workspace } = useWorkspace();
   const { mutate } = useAgentWorkspace();
   const [title, setTitle] = useState("");
@@ -1445,9 +1523,9 @@ function MonitorForm({ onDone }: { onDone: () => void }) {
     try {
       const minutes = Number(interval);
       if (!Number.isInteger(minutes) || minutes < 1 || minutes > 10080)
-        throw new Error("Use a check interval from 1 to 10080 minutes.");
+        throw new Error(t("agentUi.monitorForm.intervalError"));
       if (!sample && !/^https?:\/\//i.test(url.trim()))
-        throw new Error("Enter an http or https address for a public page.");
+        throw new Error(t("agentUi.monitorForm.urlError"));
       await mutate("/monitors", {
         title: title.trim(),
         url: sample ? "sample://availability" : url.trim(),
@@ -1465,56 +1543,58 @@ function MonitorForm({ onDone }: { onDone: () => void }) {
   return (
     <Card>
       <Field
-        label="What are you watching?"
+        label={t("agentUi.monitorForm.titleLabel")}
         value={title}
         onChangeText={setTitle}
-        placeholder="A table at my favorite restaurant"
+        placeholder={t("agentUi.monitorForm.titlePlaceholder")}
       />
       {workspace.mode === "sample" && (
         <CheckRow
           checked={sample}
-          label="Try the built-in availability page"
+          label={t("agentUi.monitorForm.sampleLabel")}
           onPress={() => setSample(!sample)}
         />
       )}
       {!sample && (
         <Field
-          label="Public page URL"
+          label={t("agentUi.monitorForm.urlLabel")}
           value={url}
           onChangeText={setUrl}
           autoCapitalize="none"
           placeholder="https://example.com/product"
         />
       )}
-      <Text style={[s.small, { marginBottom: 10 }]}>Notify me when</Text>
+      <Text style={[s.small, { marginBottom: 10 }]}>{t("agentUi.monitorForm.notifyWhen")}</Text>
       <View style={[s.row, { gap: 7, flexWrap: "wrap", marginBottom: 16 }]}>
         {(["change", "contains", "price_below"] as const).map((item) => (
           <Button small primary={condition === item} key={item} onPress={() => setCondition(item)}>
             {item === "change"
-              ? "Page changes"
+              ? t("agentUi.monitorForm.conditionChange")
               : item === "contains"
-                ? "Text appears"
-                : "Price drops below"}
+                ? t("agentUi.monitorForm.conditionContains")
+                : t("agentUi.monitorForm.conditionPrice")}
           </Button>
         ))}
       </View>
       {condition !== "change" && (
         <Field
-          label={condition === "contains" ? "Text to look for" : "Target price"}
+          label={
+            condition === "contains"
+              ? t("agentUi.monitorForm.textLabel")
+              : t("agentUi.monitorForm.priceLabel")
+          }
           value={value}
           onChangeText={setValue}
         />
       )}
       <Field
-        label="Check every (minutes)"
+        label={t("agentUi.monitorForm.intervalLabel")}
         value={interval}
         onChangeText={setInterval}
         keyboardType="number-pad"
       />
       <Text style={[s.small, { marginBottom: 14 }]}>
-        {sample
-          ? "Changes to this built-in page stay in your workspace."
-          : "OpenMuse checks this public page on the server and saves meaningful changes in Notifications."}
+        {sample ? t("agentUi.monitorForm.sampleHint") : t("agentUi.monitorForm.publicHint")}
       </Text>
       <ErrorNotice error={error} />
       <Button
@@ -1525,12 +1605,13 @@ function MonitorForm({ onDone }: { onDone: () => void }) {
         }
         onPress={() => void save()}
       >
-        Start tracking
+        {t("agentUi.monitorForm.start")}
       </Button>
     </Card>
   );
 }
 function MonitorCard({ monitor, onOpenTask }: { monitor: Monitor; onOpenTask?: () => void }) {
+  const { t } = useTranslation();
   const { mutate } = useAgentWorkspace();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1566,21 +1647,26 @@ function MonitorCard({ monitor, onOpenTask }: { monitor: Monitor; onOpenTask?: (
         <Chip tint={colors.sky}>{statusLabel(monitor.status)}</Chip>
       </View>
       <Text selectable style={s.small}>
-        {monitor.url.startsWith("sample:") ? "Built-in availability page" : monitor.url}
+        {monitor.url.startsWith("sample:") ? t("agentUi.monitorCard.samplePage") : monitor.url}
       </Text>
       <Text style={s.text}>
         {monitor.condition === "change"
-          ? "Watch for a page change"
+          ? t("agentUi.monitorCard.conditionChange")
           : monitor.condition === "contains"
-            ? `Watch for “${monitor.value}”`
-            : `Price below ${monitor.value}`}
+            ? t("agentUi.monitorCard.conditionContains", { value: monitor.value })
+            : t("agentUi.monitorCard.conditionPrice", { value: monitor.value })}
       </Text>
       <Text style={s.small}>
-        Every {monitor.intervalMinutes} min · {monitor.checks} checks
+        {t("agentUi.monitorCard.checkSummary", {
+          minutes: monitor.intervalMinutes,
+          checks: monitor.checks,
+        })}
       </Text>
       <Text style={s.small}>
-        Last check: {stamp(monitor.lastCheckedAt)}
-        {monitor.status === "active" ? `\nNext check: ${stamp(monitor.nextCheckAt)}` : ""}
+        {t("agentUi.monitorCard.lastCheck", { time: stamp(monitor.lastCheckedAt) })}
+        {monitor.status === "active"
+          ? `\n${t("agentUi.monitorCard.nextCheck", { time: stamp(monitor.nextCheckAt) })}`
+          : ""}
       </Text>
       {!!monitor.lastValue && (
         <Text selectable numberOfLines={5} style={s.muted}>
@@ -1595,19 +1681,19 @@ function MonitorCard({ monitor, onOpenTask }: { monitor: Monitor; onOpenTask?: (
             busy={busy}
             onPress={() => void act(monitor.status === "active" ? "pause" : "resume")}
           >
-            {monitor.status === "active" ? "Pause" : "Resume"}
+            {monitor.status === "active" ? t("agentUi.common.pause") : t("agentUi.common.resume")}
           </Button>
           <Button small busy={busy} onPress={() => void act("check")}>
-            Check now
+            {t("agentUi.monitorCard.checkNow")}
           </Button>
           <Button small danger busy={busy} onPress={() => void act("stop")}>
-            Stop tracking
+            {t("agentUi.monitorCard.stopTracking")}
           </Button>
         </View>
       )}
       {monitor.url.startsWith("sample:") && monitor.status !== "stopped" && (
         <Button small busy={busy} onPress={() => void changeSample()}>
-          Change availability
+          {t("agentUi.monitorCard.changeAvailability")}
         </Button>
       )}
       <TaskLink taskId={monitor.taskId} onOpen={onOpenTask} />
@@ -1615,6 +1701,7 @@ function MonitorCard({ monitor, onOpenTask }: { monitor: Monitor; onOpenTask?: (
   );
 }
 export function NotificationsSheet() {
+  const { t } = useTranslation();
   const { data, mutate } = useAgentWorkspace();
   const { close, open } = useWorkspace();
   const [error, setError] = useState("");
@@ -1628,8 +1715,8 @@ export function NotificationsSheet() {
   }
   return (
     <Sheet
-      title="Notifications"
-      subtitle="Results and decisions that need your attention."
+      title={t("agentUi.notifications.title")}
+      subtitle={t("agentUi.notifications.subtitle")}
       onClose={close}
     >
       <View style={{ gap: 14 }}>
@@ -1641,20 +1728,24 @@ export function NotificationsSheet() {
           >
             <View style={s.between}>
               <Text style={s.heading}>{item.title}</Text>
-              {!item.read && <Chip>New</Chip>}
+              {!item.read && <Chip>{t("agentUi.notifications.new")}</Chip>}
             </View>
             <Text style={s.muted}>{item.body}</Text>
             <Text style={s.small}>{stamp(item.createdAt)}</Text>
             <Button small onPress={() => void read(item.id, item.taskId)}>
-              {item.taskId ? "View task" : item.read ? "Read" : "Mark read"}
+              {item.taskId
+                ? t("agentUi.common.viewTask")
+                : item.read
+                  ? t("agentUi.notifications.read")
+                  : t("agentUi.notifications.markRead")}
             </Button>
           </Card>
         ))}
         {!data?.notifications.length && (
           <Empty
             icon={Bell}
-            title="You're all caught up"
-            detail="Results, meaningful changes and requests for your input will appear here."
+            title={t("agentUi.notifications.emptyTitle")}
+            detail={t("agentUi.notifications.emptyDetail")}
           />
         )}
       </View>
@@ -1662,6 +1753,7 @@ export function NotificationsSheet() {
   );
 }
 export function AppsScreen() {
+  const { t } = useTranslation();
   const { navigate, open } = useWorkspace();
   const { data, mutate } = useAgentWorkspace();
   const [query, setQuery] = useState("");
@@ -1701,26 +1793,26 @@ export function AppsScreen() {
   const shortcuts = [
     {
       section: "mail" as const,
-      title: "Mail",
-      detail: "Read messages and prepare replies",
+      title: t("agentUi.apps.mailTitle"),
+      detail: t("agentUi.apps.mailDetail"),
       icon: Mail,
     },
     {
       section: "calendar" as const,
-      title: "Calendar",
-      detail: "Events and reviewed invitations",
+      title: t("agentUi.apps.calendarTitle"),
+      detail: t("agentUi.apps.calendarDetail"),
       icon: CalendarDays,
     },
     {
       section: "browser" as const,
-      title: "Agent computer",
-      detail: "Persistent browser sessions",
+      title: t("agentUi.apps.browserTitle"),
+      detail: t("agentUi.apps.browserDetail"),
       icon: Globe2,
     },
     {
       section: "files" as const,
-      title: "Files",
-      detail: "PDFs, forms and filled copies",
+      title: t("agentUi.apps.filesTitle"),
+      detail: t("agentUi.apps.filesDetail"),
       icon: FileText,
     },
   ];
@@ -1728,13 +1820,13 @@ export function AppsScreen() {
     <View style={{ gap: 22 }}>
       <AgentStatus />
       <Field
-        label="Search apps"
+        label={t("agentUi.apps.searchLabel")}
         value={query}
         onChangeText={setQuery}
-        placeholder="Search connectors"
+        placeholder={t("agentUi.apps.searchPlaceholder")}
       />
       <ConnectionsScreen query={query} />
-      <Text style={s.heading}>On your computer</Text>
+      <Text style={s.heading}>{t("agentUi.apps.onYourComputer")}</Text>
       <Card style={{ paddingVertical: 3, backgroundColor: "#F4F5F6" }}>
         {shortcuts
           .filter((item) =>
@@ -1753,18 +1845,18 @@ export function AppsScreen() {
           ))}
       </Card>
       <Button onPress={() => setSettings(!settings)}>
-        {settings ? "Close agent settings" : "Personality & memory"}
+        {settings ? t("agentUi.apps.closeSettings") : t("agentUi.apps.personalityMemory")}
       </Button>
       {settings && (
         <>
           <Card style={{ gap: 10 }}>
-            <SectionHeading title="Your agent" />
+            <SectionHeading title={t("agentUi.apps.yourAgent")} />
             <View style={[s.row, { gap: 16, justifyContent: "center", marginBottom: 12 }]}>
               {(["sky", "sand", "lilac"] as const).map((item) => (
                 <Pressable
                   key={item}
                   accessibilityRole="radio"
-                  accessibilityLabel={`${statusLabel(item)} avatar`}
+                  accessibilityLabel={t("agentUi.apps.avatarLabel", { name: statusLabel(item) })}
                   accessibilityState={{ checked: avatar === item }}
                   onPress={() => setAvatar(item)}
                   style={{
@@ -1777,7 +1869,7 @@ export function AppsScreen() {
                 </Pressable>
               ))}
             </View>
-            <Field label="Name" value={name} onChangeText={setName} />
+            <Field label={t("agentUi.apps.nameLabel")} value={name} onChangeText={setName} />
             <View style={[s.row, { gap: 8 }]}>
               {(["warm", "concise", "thoughtful"] as const).map((item) => (
                 <Button key={item} small primary={tone === item} onPress={() => setTone(item)}>
@@ -1786,14 +1878,11 @@ export function AppsScreen() {
               ))}
             </View>
             <CheckRow
-              label="Show background updates in chat"
+              label={t("agentUi.apps.showChatUpdates")}
               checked={showChatUpdates}
               onPress={() => setShowChatUpdates(!showChatUpdates)}
             />
-            <Text style={s.small}>
-              Activity and notifications always keep the full record, including requests for
-              approval.
-            </Text>
+            <Text style={s.small}>{t("agentUi.apps.recordNote")}</Text>
             <Button
               busy={busy}
               disabled={!name.trim()}
@@ -1801,20 +1890,20 @@ export function AppsScreen() {
                 void save("/identity", { name: name.trim(), tone, avatar, showChatUpdates })
               }
             >
-              Save preferences
+              {t("agentUi.apps.savePreferences")}
             </Button>
           </Card>
           <Card style={{ gap: 12 }}>
-            <SectionHeading title="Memory" />
-            <Text style={s.muted}>Context you can inspect, correct or forget.</Text>
+            <SectionHeading title={t("agentUi.apps.memoryHeading")} />
+            <Text style={s.muted}>{t("agentUi.apps.memoryDetail")}</Text>
             {data?.memories.map((item) => (
               <MemoryRow key={item.id} memory={item} />
             ))}
             <Field
-              label="Remember something about me"
+              label={t("agentUi.apps.rememberLabel")}
               value={memory}
               onChangeText={setMemory}
-              placeholder="I prefer morning meetings"
+              placeholder={t("agentUi.apps.rememberPlaceholder")}
             />
             <Button
               busy={busy}
@@ -1823,7 +1912,7 @@ export function AppsScreen() {
                 void save("/memories", { text: memory.trim(), source: "User added in Apps" })
               }
             >
-              Remember
+              {t("agentUi.apps.remember")}
             </Button>
           </Card>
         </>
@@ -1833,6 +1922,7 @@ export function AppsScreen() {
   );
 }
 function MemoryRow({ memory }: { memory: AgentMemory }) {
+  const { t } = useTranslation();
   const { mutate } = useAgentWorkspace();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(memory.text);
@@ -1855,7 +1945,7 @@ function MemoryRow({ memory }: { memory: AgentMemory }) {
       style={{ gap: 8, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.line }}
     >
       {editing ? (
-        <Field label="Memory" value={text} onChangeText={setText} />
+        <Field label={t("agentUi.memoryRow.label")} value={text} onChangeText={setText} />
       ) : (
         <Text style={s.text}>{memory.text}</Text>
       )}
@@ -1865,15 +1955,15 @@ function MemoryRow({ memory }: { memory: AgentMemory }) {
       <View style={[s.row, { gap: 8 }]}>
         {editing ? (
           <Button small busy={busy} disabled={!text.trim()} onPress={() => void act(false)}>
-            Save correction
+            {t("agentUi.memoryRow.saveCorrection")}
           </Button>
         ) : (
           <Button small onPress={() => setEditing(true)}>
-            Edit
+            {t("agentUi.common.edit")}
           </Button>
         )}
         <Button small danger busy={busy} onPress={() => void act(true)}>
-          Forget
+          {t("agentUi.memoryRow.forget")}
         </Button>
       </View>
       <ErrorNotice error={error} />

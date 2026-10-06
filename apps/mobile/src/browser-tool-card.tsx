@@ -1,8 +1,10 @@
 import { Check, Globe2, Hand, RotateCw } from "lucide-react-native";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, AppState, Image, Text, View } from "react-native";
 import { z } from "zod";
 import type { BrowserSession } from "../../../packages/domain/src";
+import i18n from "./locales";
 import { Button, Card, colors, ErrorNotice, s } from "./ui";
 import { useWorkspace } from "./workspace";
 
@@ -24,11 +26,11 @@ function resultValue(result: unknown) {
 }
 
 function siteLabel(url: unknown) {
-  if (typeof url !== "string") return "Opening a page";
+  if (typeof url !== "string") return i18n.t("browserToolCard.openingPage");
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
-    return "Opening a page";
+    return i18n.t("browserToolCard.openingPage");
   }
 }
 
@@ -43,6 +45,7 @@ export function BrowserToolCard({
   loading: boolean;
 }) {
   const { api, workspace, open } = useWorkspace();
+  const { t } = useTranslation();
   const { running, active } = useContext(BrowserRunContext);
   const working = loading && active;
   const value = resultValue(result);
@@ -89,7 +92,7 @@ export function BrowserToolCard({
   const failure = toolError.success
     ? toolError.data.error
     : !loading && !visited
-      ? "The browser did not return a page. Try your request again."
+      ? t("browserToolCard.noPage")
       : "";
   return (
     <Card
@@ -100,26 +103,30 @@ export function BrowserToolCard({
           <Globe2 size={21} color={colors.blueDark} />
         </View>
         <View style={{ flex: 1, gap: 1 }}>
-          <Text style={[s.text, { fontWeight: "600" }]}>Browser</Text>
+          <Text style={[s.text, { fontWeight: "600" }]}>{t("browserToolCard.title")}</Text>
           <Text numberOfLines={1} style={[s.small, { fontSize: 12 }]}>
             {working
-              ? "Reading the page…"
+              ? t("browserToolCard.reading")
               : loading
-                ? "Browsing paused"
+                ? t("browserToolCard.paused")
                 : failure
-                  ? "Couldn’t read the page"
+                  ? t("browserToolCard.couldNotRead")
                   : siteLabel(visited?.url)}
           </Text>
         </View>
         {working ? (
           <ActivityIndicator size="small" color={colors.blueDark} />
         ) : visited ? (
-          <Check size={17} color="#47896C" accessibilityLabel="Page read" />
+          <Check
+            size={17}
+            color="#47896C"
+            accessibilityLabel={t("browserToolCard.pageReadAria")}
+          />
         ) : null}
       </View>
       {preview ? (
         <Image
-          accessibilityLabel={`Browser preview: ${visited?.title}`}
+          accessibilityLabel={t("browserToolCard.previewAria", { title: visited?.title })}
           source={{ uri: api.url(preview) }}
           style={{ width: "100%", aspectRatio: 1.7, borderRadius: 12, backgroundColor: "#FFF" }}
           resizeMode="contain"
@@ -142,14 +149,14 @@ export function BrowserToolCard({
           ) : visited ? (
             <Text style={s.small}>
               {browser && browser.url !== visited.url
-                ? "Page visited. The browser has moved on."
+                ? t("browserToolCard.pageMovedOn")
                 : browser?.status === "closed"
-                  ? "Session saved. Take control to reopen it."
+                  ? t("browserToolCard.sessionSavedHint")
                   : browser?.status === "error"
-                    ? "Session needs attention. Take control to reconnect."
+                    ? t("browserToolCard.sessionNeedsAttention")
                     : previewFailed
-                      ? "Preview unavailable. You can still take control."
-                      : "Connecting to the saved session…"}
+                      ? t("browserToolCard.previewUnavailableHint")
+                      : t("browserToolCard.connectingSession")}
             </Text>
           ) : null}
         </View>
@@ -162,12 +169,12 @@ export function BrowserToolCard({
           onPress={() => browser && open({ type: "browser", browser })}
           style={{ backgroundColor: "#F9F9FA", minHeight: 38, paddingVertical: 8 }}
         >
-          Take control
+          {t("browserToolCard.takeControl")}
         </Button>
       )}
       {!!error && (
         <Button small icon={RotateCw} onPress={() => setRetry((attempt) => attempt + 1)}>
-          Reconnect preview
+          {t("browserToolCard.reconnectPreview")}
         </Button>
       )}
     </Card>

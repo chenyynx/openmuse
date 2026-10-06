@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation, type TFunction } from "react-i18next";
 import { Linking, Text, type TextStyle } from "react-native";
 import Markdown, { type MarkdownStyles, type RenderRules } from "react-native-markdown-renderer";
 import { assistantMarkdown, isSafeAssistantUrl } from "./assistant-markdown";
@@ -22,23 +23,29 @@ const renderCodeBlock: RenderRules["fence"] = (node, _children, _parent, styles)
     {node.content.replace(/\n$/, "")}
   </Text>
 );
-const rules: RenderRules = {
-  textgroup: (node, children) => (
-    <Text key={node.key} selectable style={textStyle}>
-      {children}
-    </Text>
-  ),
-  image: (node) => (
-    <Text key={node.key} selectable style={{ color: colors.muted }}>
-      {node.attributes.alt ? `[Image: ${node.attributes.alt}]` : "[Image]"}
-    </Text>
-  ),
-  code_block: renderCodeBlock,
-  fence: renderCodeBlock,
-};
+function createRules(t: TFunction): RenderRules {
+  return {
+    textgroup: (node, children) => (
+      <Text key={node.key} selectable style={textStyle}>
+        {children}
+      </Text>
+    ),
+    image: (node) => (
+      <Text key={node.key} selectable style={{ color: colors.muted }}>
+        {node.attributes.alt
+          ? t("assistantResponse.imageWithAlt", { alt: node.attributes.alt })
+          : t("assistantResponse.image")}
+      </Text>
+    ),
+    code_block: renderCodeBlock,
+    fence: renderCodeBlock,
+  };
+}
 
 export function AssistantResponse({ content }: { content: string }) {
+  const { t } = useTranslation();
   const [linkError, setLinkError] = useState("");
+  const rules = useMemo(() => createRules(t), [t]);
   const onLinkPress = useCallback((url: string) => {
     if (!isSafeAssistantUrl(url)) return false;
     setLinkError("");

@@ -1,3 +1,4 @@
+import "./src/locales";
 import { CopilotKitProvider } from "@copilotkit/react-native/headless";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -13,6 +14,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   AppState,
@@ -42,31 +44,8 @@ import { ThreadsProvider, ThreadsSheet, useMuseThread } from "./src/threads";
 import { Button, Card, colors, ErrorNotice, Field, IconButton, Mascot, s } from "./src/ui";
 import { type Detail, useWorkspace, WorkspaceContext } from "./src/workspace";
 
-const nav: { id: Section; label: string; icon: LucideIcon }[] = [
-  { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "activity", label: "Activity", icon: PanelsTopLeft },
-  { id: "ideas", label: "Ideas", icon: Lightbulb },
-  { id: "goals", label: "Goals", icon: SquareCheck },
-  { id: "apps", label: "Apps", icon: Shapes },
-];
-const titles: Partial<Record<Section, { title: string; subtitle: string }>> = {
-  activity: { title: "Activity", subtitle: "Plans, progress, decisions and results." },
-  ideas: { title: "Ideas", subtitle: "Useful next steps, grounded in your world." },
-  goals: {
-    title: "Goals",
-    subtitle: "Longer-term goals and things to keep an eye on.",
-  },
-  apps: {
-    title: "Apps",
-    subtitle: "Connections, capabilities and what your agent remembers.",
-  },
-  connections: { title: "Apps", subtitle: "Connections and capabilities." },
-  mail: { title: "Mail", subtitle: "The conversations behind your work." },
-  calendar: { title: "Calendar", subtitle: "Time for what matters." },
-  browser: { title: "Browser", subtitle: "Your connected browsing sessions." },
-  files: { title: "Files", subtitle: "Documents, forms and filled copies." },
-};
 export default function App() {
+  const { t } = useTranslation();
   const [token, setToken] = useState("");
   const [accessKey, setAccessKey] = useState("");
   const [busy, setBusy] = useState(true);
@@ -111,27 +90,26 @@ export default function App() {
             <Text
               style={{ fontSize: 32, color: colors.text, letterSpacing: -1, fontWeight: "500" }}
             >
-              Welcome to OpenMuse.
+              {t("app.welcome.title")}
             </Text>
-            <Text style={[s.muted, { textAlign: "center" }]}>A little room for your day.</Text>
+            <Text style={[s.muted, { textAlign: "center" }]}>{t("app.welcome.tagline")}</Text>
             {busy ? (
               <ActivityIndicator color={colors.blueDark} />
             ) : (
               <Card style={{ width: "100%" }}>
                 <ErrorNotice error={error} />
                 <Field
-                  label="Workspace access key"
+                  label={t("app.welcome.keyLabel")}
                   value={accessKey}
                   onChangeText={setAccessKey}
                   secureTextEntry
-                  placeholder="Required for a live workspace"
+                  placeholder={t("app.welcome.keyPlaceholder")}
                 />
                 <Button primary onPress={() => void connect(accessKey || undefined)}>
-                  Open workspace
+                  {t("app.welcome.openButton")}
                 </Button>
                 <Text style={[s.small, { marginTop: 15 }]}>
-                  Local workspaces open without a key. Make sure your OpenMuse server is running at{" "}
-                  {API_URL}.
+                  {t("app.welcome.localHint", { url: API_URL })}
                 </Text>
               </Card>
             )}
@@ -142,6 +120,7 @@ export default function App() {
   );
 }
 function WorkspaceApp({ token }: { token: string }) {
+  const { t } = useTranslation();
   const api = useMemo(() => new MuseApi(token), [token]);
   const [workspace, setWorkspace] = useState<Workspace>();
   const [section, setSection] = useState<Section>("chat");
@@ -196,13 +175,13 @@ function WorkspaceApp({ token }: { token: string }) {
           <>
             <ErrorNotice error={error} />
             <Button onPress={() => void refresh().catch((e) => setError(String(e)))}>
-              Try again
+              {t("app.loading.retry")}
             </Button>
           </>
         ) : (
           <>
             <ActivityIndicator color={colors.blueDark} />
-            <Text style={s.muted}>Opening your workspace…</Text>
+            <Text style={s.muted}>{t("app.loading.opening")}</Text>
           </>
         )}
       </SafeAreaView>
@@ -240,6 +219,7 @@ function WorkspaceShell({
   error: string;
   prompt?: { id: number; text: string };
 }) {
+  const { t } = useTranslation();
   const { workspace, section, navigate, open } = useWorkspace();
   const { data } = useAgentWorkspace();
   const {
@@ -254,6 +234,30 @@ function WorkspaceShell({
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { width } = useWindowDimensions();
   const desktop = width >= 900;
+  const nav: { id: Section; label: string; icon: LucideIcon }[] = [
+    { id: "chat", label: t("app.nav.chat"), icon: MessageCircle },
+    { id: "activity", label: t("app.nav.activity"), icon: PanelsTopLeft },
+    { id: "ideas", label: t("app.nav.ideas"), icon: Lightbulb },
+    { id: "goals", label: t("app.nav.goals"), icon: SquareCheck },
+    { id: "apps", label: t("app.nav.apps"), icon: Shapes },
+  ];
+  const titles: Partial<Record<Section, { title: string; subtitle: string }>> = {
+    activity: {
+      title: t("app.title.activity"),
+      subtitle: t("app.subtitle.activity"),
+    },
+    ideas: { title: t("app.title.ideas"), subtitle: t("app.subtitle.ideas") },
+    goals: { title: t("app.title.goals"), subtitle: t("app.subtitle.goals") },
+    apps: { title: t("app.title.apps"), subtitle: t("app.subtitle.apps") },
+    connections: {
+      title: t("app.title.connections"),
+      subtitle: t("app.subtitle.connections"),
+    },
+    mail: { title: t("app.title.mail"), subtitle: t("app.subtitle.mail") },
+    calendar: { title: t("app.title.calendar"), subtitle: t("app.subtitle.calendar") },
+    browser: { title: t("app.title.browser"), subtitle: t("app.subtitle.browser") },
+    files: { title: t("app.title.files"), subtitle: t("app.subtitle.files") },
+  };
   const pending =
     (data?.notifications.filter((n) => !n.read).length || 0) +
     workspace.actions.filter((a) => a.status === "awaiting_review").length;
@@ -264,13 +268,13 @@ function WorkspaceShell({
   const agentName = data?.identity.name || "OpenMuse";
   const status = activeTask
     ? activeTask.status === "waiting_approval"
-      ? `Ready to review · ${activeTask.title}`
+      ? t("app.status.readyToReview", { title: activeTask.title })
       : activeTask.status === "waiting_input"
-        ? `Needs your input · ${activeTask.title}`
+        ? t("app.status.needsInput", { title: activeTask.title })
         : activeTask.plan.find((step) => step.status === "running")?.title || activeTask.title
     : data?.tasks.some((task) => task.status === "queued")
-      ? "Picking up your next task…"
-      : "Here when you need me";
+      ? t("app.status.pickingUp")
+      : t("app.status.idle");
   const title = titles[section] || titles.apps;
   const Screen =
     section === "mail"
@@ -304,14 +308,14 @@ function WorkspaceShell({
             <View style={{ position: "absolute", left: 0, top: 16 }}>
               <IconButton
                 icon={Menu}
-                label="Open conversations and menu"
+                label={t("app.a11y.openMenu")}
                 onPress={() => setThreadsOpen(true)}
               />
             </View>
             <View style={{ alignItems: "center", gap: 1 }}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Open ${agentName} activity and approvals`}
+                accessibilityLabel={t("app.a11y.openAgentActivity", { agent: agentName })}
                 onPress={() => navigate("activity")}
                 style={({ pressed }) => ({
                   alignItems: "center",
@@ -342,7 +346,7 @@ function WorkspaceShell({
             <View style={{ position: "absolute", right: 0, top: 16 }}>
               <IconButton
                 icon={Bell}
-                label={`Notifications, ${pending} unread or pending`}
+                label={t("app.a11y.notifications", { count: pending })}
                 onPress={() => open({ type: "notifications" })}
               />
               {pending > 0 && (
@@ -375,7 +379,7 @@ function WorkspaceShell({
                     style={{ alignSelf: "flex-start", marginBottom: 18 }}
                     onPress={() => navigate("apps")}
                   >
-                    Back to Apps
+                    {t("app.backToApps")}
                   </Button>
                 )}
                 <Text style={[s.title, { fontSize: 25, marginBottom: 22 }]}>{title?.title}</Text>
@@ -395,13 +399,13 @@ function WorkspaceShell({
                 <>
                   <ErrorNotice error={threadsError} />
                   {threadsError ? (
-                    <Button onPress={retryThreads}>Retry main chat</Button>
+                    <Button onPress={retryThreads}>{t("app.retryMainChat")}</Button>
                   ) : threadsLoading ? (
                     <ActivityIndicator color={colors.blueDark} />
                   ) : null}
                   {!threadsLoading && selection.id !== mainId && (
                     <Text style={[s.small, { textAlign: "center", marginBottom: 8 }]}>
-                      Side chat
+                      {t("app.sideChat")}
                     </Text>
                   )}
                   {visited.map((thread) => (
@@ -493,7 +497,7 @@ function WorkspaceShell({
               <Text style={{ color: "#FFF", fontSize: 13, flexShrink: 1 }}>{toast}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Dismiss notification"
+                accessibilityLabel={t("app.a11y.dismissNotification")}
                 onPress={clearToast}
               >
                 <X size={16} color="#FFF" />

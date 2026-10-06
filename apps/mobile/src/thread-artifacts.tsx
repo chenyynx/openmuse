@@ -1,5 +1,6 @@
 import { ChevronRight, FileText } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 import type { Artifact, BrowserSession } from "../../../packages/domain/src";
 import type { AgentArtifact, AgentTask } from "../../../packages/domain/src/agent";
@@ -9,11 +10,12 @@ import { Button, Card, colors, ErrorNotice, s } from "./ui";
 import { useWorkspace } from "./workspace";
 
 export function FileThreadCard({ file }: { file: Artifact }) {
+  const { t } = useTranslation();
   const { open } = useWorkspace();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open PDF: ${file.name}`}
+      accessibilityLabel={t("threadArtifacts.openPdf", { name: file.name })}
       onPress={() => open({ type: "file", file })}
       style={{ width: "100%", maxWidth: 440 }}
     >
@@ -39,7 +41,9 @@ export function FileThreadCard({ file }: { file: Artifact }) {
             ))
           ) : (
             <Text style={s.muted}>
-              {file.pageCount} {file.pageCount === 1 ? "page" : "pages"} · Tap to read the document
+              {t(file.pageCount === 1 ? "threadArtifacts.onePage" : "threadArtifacts.manyPages", {
+                count: file.pageCount,
+              })}
             </Text>
           )}
         </View>
@@ -61,6 +65,7 @@ export function FileThreadCard({ file }: { file: Artifact }) {
 }
 /** Hydrates task-linked artifacts by ID on replay; signed URLs are never stored in messages. */
 export function TaskThreadCard({ task }: { task: AgentTask }) {
+  const { t } = useTranslation();
   const { api } = useWorkspace();
   const [detail, setDetail] = useState<{
     artifacts: AgentArtifact[];
@@ -106,7 +111,7 @@ export function TaskThreadCard({ task }: { task: AgentTask }) {
       <ErrorNotice error={error} />
       {!!error && (
         <Button small onPress={() => setAttempt((value) => value + 1)}>
-          Reload task results
+          {t("threadArtifacts.reloadTask")}
         </Button>
       )}
     </View>

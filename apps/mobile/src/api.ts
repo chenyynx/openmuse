@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import i18n from "./locales";
 
 export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ||
@@ -21,7 +22,9 @@ export class MuseApi {
     const payload = await response.json();
     if (!response.ok)
       throw new Error(
-        typeof payload.error === "string" ? payload.error : `Request failed (${response.status})`,
+        typeof payload.error === "string"
+          ? payload.error
+          : i18n.t("api.requestFailed", { status: response.status }),
       );
     return payload;
   }
@@ -39,6 +42,6 @@ export async function createSession(
     body: JSON.stringify({ accessKey }),
   });
   const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "Could not open your workspace.");
+  if (!response.ok) throw new Error(payload.error || i18n.t("api.openFailed"));
   return payload;
 }

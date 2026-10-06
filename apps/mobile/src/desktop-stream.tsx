@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react-native";
 import { memo, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, AppState, Linking, Platform, View } from "react-native";
 import BrowserConsole from "./BrowserConsole";
 import { Button, colors, ErrorNotice } from "./ui";
@@ -74,6 +75,7 @@ export const DesktopStream = memo(function DesktopStream({
 }) {
   const embedded = embed && Platform.OS === "web";
   const { api } = useWorkspace();
+  const { t } = useTranslation();
   const { url, error, setError } = useDesktopStream(running && embedded);
   const [opening, setOpening] = useState(false);
   async function open() {
@@ -94,7 +96,7 @@ export const DesktopStream = memo(function DesktopStream({
       <ErrorNotice error={error} />
       {embedded && !url && !error && <ActivityIndicator color={colors.blueDark} />}
       {!!url && embed && Platform.OS === "web" && (
-        <BrowserConsole url={url} title="Computer desktop" sandboxed />
+        <BrowserConsole url={url} title={t("desktopStream.consoleTitle")} sandboxed />
       )}
       {running && (!embedded || !!url) && (
         <Button
@@ -103,7 +105,7 @@ export const DesktopStream = memo(function DesktopStream({
           disabled={opening}
           onPress={() => void open()}
         >
-          {opening ? "Opening…" : "Open desktop"}
+          {opening ? t("desktopStream.opening") : t("desktopStream.openDesktop")}
         </Button>
       )}
     </View>

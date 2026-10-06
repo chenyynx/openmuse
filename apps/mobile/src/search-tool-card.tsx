@@ -1,5 +1,6 @@
 import { Search } from "lucide-react-native";
 import { useContext, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
 import { z } from "zod";
 import { BrowserRunContext } from "./browser-tool-card";
@@ -13,6 +14,7 @@ const resultSchema = z.object({
 
 export function SearchToolCard({ result, loading }: { result: unknown; loading: boolean }) {
   const { active } = useContext(BrowserRunContext);
+  const { t } = useTranslation();
   const [linkError, setLinkError] = useState("");
   let value = result;
   if (typeof value === "string") {
@@ -28,7 +30,7 @@ export function SearchToolCard({ result, loading }: { result: unknown; loading: 
   const failure = error.success
     ? error.data.error
     : !loading && !parsed.success
-      ? "Search did not return readable results."
+      ? t("searchToolCard.unreadable")
       : "";
   const sources = parsed.success
     ? [...new Map(parsed.data.results.map((source) => [source.url, source])).values()]
@@ -46,14 +48,16 @@ export function SearchToolCard({ result, loading }: { result: unknown; loading: 
         )}
         <Text style={s.text}>
           {failure
-            ? "Search failed"
+            ? t("searchToolCard.failed")
             : working
-              ? "Searching the web…"
+              ? t("searchToolCard.searching")
               : loading
-                ? "Search stopped"
+                ? t("searchToolCard.stopped")
                 : count
-                  ? `Found ${count} ${count === 1 ? "source" : "sources"}`
-                  : "No sources found"}
+                  ? count === 1
+                    ? t("searchToolCard.foundOne", { count })
+                    : t("searchToolCard.foundMany", { count })
+                  : t("searchToolCard.noSources")}
         </Text>
       </View>
       {!loading && parsed.success && (
@@ -66,7 +70,7 @@ export function SearchToolCard({ result, loading }: { result: unknown; loading: 
               onPress={() => {
                 setLinkError("");
                 void Linking.openURL(source.url).catch(() =>
-                  setLinkError("Could not open this source."),
+                  setLinkError(t("searchToolCard.openFailed")),
                 );
               }}
             >
@@ -74,7 +78,7 @@ export function SearchToolCard({ result, loading }: { result: unknown; loading: 
             </Text>
           ))}
           {parsed.data.truncated && (
-            <Text style={s.small}>Some search results or excerpts were omitted.</Text>
+            <Text style={s.small}>{t("searchToolCard.omitted")}</Text>
           )}
           {[...new Set(parsed.data.warnings)].map((warning) => (
             <Text key={warning} style={s.small}>

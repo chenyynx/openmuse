@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { type TFunction, useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Linking, Text, type TextStyle } from "react-native";
 import Markdown, { type MarkdownStyles, type RenderRules } from "react-native-markdown-renderer";
 import { assistantMarkdown, isSafeAssistantUrl } from "./assistant-markdown";

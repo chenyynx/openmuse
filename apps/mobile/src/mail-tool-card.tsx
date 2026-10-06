@@ -64,8 +64,7 @@ export function MailToolCard({
     const parsed = z
       .object({ matches: z.array(z.object({ id: z.string() })), truncated: z.boolean() })
       .safeParse(value);
-    if (!parsed.success)
-      return <ErrorNotice error={t("mailToolCard.mailboxUnreadable")} />;
+    if (!parsed.success) return <ErrorNotice error={t("mailToolCard.mailboxUnreadable")} />;
     const count = parsed.data.matches.length;
     const atLeast = parsed.data.truncated ? t("mailToolCard.atLeast") : "";
     return (

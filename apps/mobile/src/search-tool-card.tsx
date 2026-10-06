@@ -77,9 +77,7 @@ export function SearchToolCard({ result, loading }: { result: unknown; loading: 
               {source.title || source.url}
             </Text>
           ))}
-          {parsed.data.truncated && (
-            <Text style={s.small}>{t("searchToolCard.omitted")}</Text>
-          )}
+          {parsed.data.truncated && <Text style={s.small}>{t("searchToolCard.omitted")}</Text>}
           {[...new Set(parsed.data.warnings)].map((warning) => (
             <Text key={warning} style={s.small}>
               {warning}

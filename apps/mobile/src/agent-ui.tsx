@@ -74,7 +74,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   lilac: "agentUi.status.lilac",
   new: "agentUi.status.new",
   observation: "agentUi.status.observation",
-pending: "agentUi.status.pending",
+  pending: "agentUi.status.pending",
   plan: "agentUi.status.plan",
   price_below: "agentUi.status.priceBelow",
   queued: "agentUi.status.queued",
@@ -1037,7 +1037,9 @@ export function DelegateSheet() {
         </>
       )}
       {kind === "agent" && !workspace.runtime.configured && (
-        <Text style={[s.muted, { marginBottom: 16 }]}>{t("agentUi.delegate.modelRequiredHint")}</Text>
+        <Text style={[s.muted, { marginBottom: 16 }]}>
+          {t("agentUi.delegate.modelRequiredHint")}
+        </Text>
       )}
       <ErrorNotice error={error} />
       <Button
@@ -1252,9 +1254,7 @@ export function GoalsScreen() {
           </Pressable>
         ))}
         {!monitors.length && (
-          <Text style={[s.muted, { paddingVertical: 10 }]}>
-            {t("agentUi.goals.trackingEmpty")}
-          </Text>
+          <Text style={[s.muted, { paddingVertical: 10 }]}>{t("agentUi.goals.trackingEmpty")}</Text>
         )}
         {monitors.length > 3 && (
           <Button small onPress={() => setShowAll(!showAll)}>
@@ -1277,7 +1277,9 @@ export function GoalsScreen() {
               backgroundColor: "#3D9BDE",
             }}
           />
-          <Text style={[s.heading, { color: colors.blueDark }]}>{t("agentUi.goals.goalsHeading")}</Text>
+          <Text style={[s.heading, { color: colors.blueDark }]}>
+            {t("agentUi.goals.goalsHeading")}
+          </Text>
         </View>
         {data?.goals.map((item) => (
           <Pressable
@@ -1302,9 +1304,7 @@ export function GoalsScreen() {
           </Pressable>
         ))}
         {!data?.goals.length && (
-          <Text style={[s.muted, { paddingVertical: 10 }]}>
-            {t("agentUi.goals.goalsEmpty")}
-          </Text>
+          <Text style={[s.muted, { paddingVertical: 10 }]}>{t("agentUi.goals.goalsEmpty")}</Text>
         )}
       </View>
       <View style={{ height: 1, backgroundColor: colors.line }} />
@@ -1330,7 +1330,9 @@ export function GoalsScreen() {
       {adding && (
         <Sheet
           title={
-            adding === "Tracking" ? t("agentUi.goals.trackSheetTitle") : t("agentUi.goals.sheetTitle")
+            adding === "Tracking"
+              ? t("agentUi.goals.trackSheetTitle")
+              : t("agentUi.goals.sheetTitle")
           }
           onClose={() => setAdding(undefined)}
         >

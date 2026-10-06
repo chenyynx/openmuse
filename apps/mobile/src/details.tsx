@@ -73,18 +73,18 @@ export function Details({ detail }: { detail: Detail }) {
   if (detail.type === "review") return <ReviewDetail initial={detail.action} />;
   if (detail.type === "browser") return <BrowserDetail initial={detail.browser} />;
   return (
-    <Sheet
-      title={t("details.menu.title")}
-      subtitle={t("details.menu.subtitle")}
-      onClose={close}
-    >
+    <Sheet title={t("details.menu.title")} subtitle={t("details.menu.subtitle")} onClose={close}>
       {[
         { section: "mail" as const, title: t("details.menu.mail"), icon: MailIcon },
         { section: "calendar" as const, title: t("details.menu.calendar"), icon: CalendarDays },
         { section: "browser" as const, title: t("details.menu.browser"), icon: Globe2 },
         { section: "files" as const, title: t("details.menu.files"), icon: FileText },
         { section: "activity" as const, title: t("details.menu.activity"), icon: Clock3 },
-        { section: "connections" as const, title: t("details.menu.connections"), icon: ShieldCheck },
+        {
+          section: "connections" as const,
+          title: t("details.menu.connections"),
+          icon: ShieldCheck,
+        },
       ].map((item) => (
         <LinkRow
           key={item.section}
@@ -142,10 +142,9 @@ function MailDetail({ mail: m }: { mail: Mail }) {
   return (
     <Sheet
       title={m.subject}
-      subtitle={t(
-        thread.length === 1 ? "details.mail.threadOne" : "details.mail.threadMany",
-        { count: thread.length },
-      )}
+      subtitle={t(thread.length === 1 ? "details.mail.threadOne" : "details.mail.threadMany", {
+        count: thread.length,
+      })}
       onClose={close}
     >
       {loading && (
@@ -195,9 +194,7 @@ function MailDetail({ mail: m }: { mail: Mail }) {
         </Card>
       ))}
       <ErrorNotice error={error} />
-      {!!error && (
-        <Button onPress={() => setRetry(retry + 1)}>{t("details.mail.reload")}</Button>
-      )}
+      {!!error && <Button onPress={() => setRetry(retry + 1)}>{t("details.mail.reload")}</Button>}
       <Button
         primary
         icon={Reply}
@@ -499,9 +496,7 @@ function EventEditor({
         allDay={allDay}
       />
       {allDay && (
-        <Text style={[s.small, { marginBottom: 15 }]}>
-          {t("details.event.allDayHint")}
-        </Text>
+        <Text style={[s.small, { marginBottom: 15 }]}>{t("details.event.allDayHint")}</Text>
       )}
       <Field
         label={t("details.event.timeZone")}
@@ -703,7 +698,10 @@ function ReviewDetail({ initial }: { initial: ActionProposal }) {
                 />
               </>
             )}
-            <ReviewLine label={t("details.review.calendar")} value={String(d.calendarId || "primary")} />
+            <ReviewLine
+              label={t("details.review.calendar")}
+              value={String(d.calendarId || "primary")}
+            />
             <Text style={s.small}>
               {t(
                 action.kind === "calendar.delete"
@@ -935,12 +933,9 @@ function BrowserDetail({ initial }: { initial: BrowserSession }) {
       const files = result.files;
       notify(
         files.length
-          ? t(
-              files.length === 1
-                ? "details.browser.downloadOne"
-                : "details.browser.downloadMany",
-              { count: files.length },
-            )
+          ? t(files.length === 1 ? "details.browser.downloadOne" : "details.browser.downloadMany", {
+              count: files.length,
+            })
           : t("details.browser.noDownloads"),
       );
     } catch (e) {

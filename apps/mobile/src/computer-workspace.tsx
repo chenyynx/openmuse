@@ -276,9 +276,7 @@ export function LinuxWorkspace({
                 {t("computerWorkspace.newCommand")}
               </Button>
             )}
-            {!!commandRunning && (
-              <Text style={s.muted}>{t("computerWorkspace.workingNote")}</Text>
-            )}
+            {!!commandRunning && <Text style={s.muted}>{t("computerWorkspace.workingNote")}</Text>}
             {snapshot.commands.length === 0 ? (
               <Empty
                 icon={Terminal}
@@ -382,9 +380,7 @@ function CommandReceipt({ run }: { run: ComputerCommand }) {
           {!run.stdout && !run.stderr && run.status !== "running" && (
             <Text style={s.small}>{t("computerWorkspace.noOutput")}</Text>
           )}
-          {run.truncated && (
-            <Text style={s.small}>{t("computerWorkspace.outputTruncated")}</Text>
-          )}
+          {run.truncated && <Text style={s.small}>{t("computerWorkspace.outputTruncated")}</Text>}
         </>
       )}
       {!!(run.stdout || run.stderr) && (

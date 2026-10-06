@@ -1,5 +1,5 @@
-import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Text, View } from "react-native";
 import { colors, s } from "./ui";
 
 interface DateFieldsProps {

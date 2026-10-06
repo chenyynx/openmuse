@@ -182,11 +182,7 @@ export function ComputerSheet() {
     }
   }
   return (
-    <Sheet
-      title={t("computer.sheetTitle")}
-      subtitle={t("computer.sheetSubtitle")}
-      onClose={close}
-    >
+    <Sheet title={t("computer.sheetTitle")} subtitle={t("computer.sheetSubtitle")} onClose={close}>
       <View style={{ gap: 20 }}>
         {shown === "Browser" && (
           <View
@@ -198,9 +194,7 @@ export function ComputerSheet() {
                 {available ? t("computer.browserConnected") : t("computer.browserOffline")}
               </Text>
               <Text style={s.muted}>
-                {available
-                  ? t("computer.browserConnectedNote")
-                  : t("computer.browserOfflineNote")}
+                {available ? t("computer.browserConnectedNote") : t("computer.browserOfflineNote")}
               </Text>
             </View>
           </View>

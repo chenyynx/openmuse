@@ -117,11 +117,7 @@ export function BrowserToolCard({
         {working ? (
           <ActivityIndicator size="small" color={colors.blueDark} />
         ) : visited ? (
-          <Check
-            size={17}
-            color="#47896C"
-            accessibilityLabel={t("browserToolCard.pageReadAria")}
-          />
+          <Check size={17} color="#47896C" accessibilityLabel={t("browserToolCard.pageReadAria")} />
         ) : null}
       </View>
       {preview ? (
